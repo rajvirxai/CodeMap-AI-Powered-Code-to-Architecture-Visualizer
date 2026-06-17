@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 const { scanDirectory } = require('../utils/repoScanner');
+const { analyzeRepository } = require('../services/llmService');
 
 /**
  * 1. Health Check Endpoint
@@ -75,9 +76,11 @@ const uploadRepo = (req, res) => {
  * Scans the directory corresponding to folderId using our repoScanner utility
  * and returns the directory structure JSON tree.
  */
-const analyzeRepo = (req, res) => {
+const analyzeRepo = async (req, res) => {
   try {
     const { folderId } = req.body;
+    const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
+    const model = req.body.model || req.query.model || req.headers['x-model'];
 
     // Validate that folderId was provided in the request
     if (!folderId) {
@@ -97,8 +100,14 @@ const analyzeRepo = (req, res) => {
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
 
-    // Return the scanned tree
-    return res.status(200).json(repoTree);
+    // Analyze the repository tree using the AI service
+    const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
+
+    // Return both the scanned tree and the AI-generated architecture graph
+    return res.status(200).json({
+      repoTree: repoTree,
+      architecture: architecture
+    });
   } catch (error) {
     console.error('Error during repository analysis:', error);
     return res.status(500).json({
