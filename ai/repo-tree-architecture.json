@@ -1,0 +1,51 @@
+{
+  "nodes": [
+    {
+      "id": "sample_project_v2",
+      "label": "sample-project-v2",
+      "type": "other"
+    },
+    {
+      "id": "sample_project_v2_index_js",
+      "label": "index.js",
+      "type": "other"
+    },
+    {
+      "id": "sample_project_v2_package_json",
+      "label": "package.json",
+      "type": "config"
+    },
+    {
+      "id": "sample_project_v2_src",
+      "label": "src",
+      "type": "frontend"
+    },
+    {
+      "id": "sample_project_v2_src_app_js",
+      "label": "app.js",
+      "type": "frontend"
+    }
+  ],
+  "edges": [
+    {
+      "source": "sample_project_v2",
+      "target": "sample_project_v2_index_js",
+      "relationship": "contains"
+    },
+    {
+      "source": "sample_project_v2",
+      "target": "sample_project_v2_package_json",
+      "relationship": "contains"
+    },
+    {
+      "source": "sample_project_v2",
+      "target": "sample_project_v2_src",
+      "relationship": "contains"
+    },
+    {
+      "source": "sample_project_v2_src",
+      "target": "sample_project_v2_src_app_js",
+      "relationship": "contains"
+    }
+  ]
+}

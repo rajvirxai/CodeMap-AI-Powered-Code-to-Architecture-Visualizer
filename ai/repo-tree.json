@@ -1,0 +1,24 @@
+{
+    "name": "sample-project-v2",
+    "type": "folder",
+    "children": [
+        {
+            "name": "index.js",
+            "type": "file"
+        },
+        {
+            "name": "package.json",
+            "type": "file"
+        },
+        {
+            "name": "src",
+            "type": "folder",
+            "children": [
+                {
+                    "name": "app.js",
+                    "type": "file"
+                }
+            ]
+        }
+    ]
+}
