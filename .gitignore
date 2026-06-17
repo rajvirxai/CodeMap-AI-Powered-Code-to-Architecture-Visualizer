@@ -1,0 +1,14 @@
+# Node modules
+node_modules/
+
+# Uploads directory (holds temp uploads and extracted repositories)
+uploads/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.log
+
+# Environment variables
+.env
