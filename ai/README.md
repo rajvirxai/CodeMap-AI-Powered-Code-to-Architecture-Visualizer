@@ -206,7 +206,28 @@ Analyzes repository structure trees and outputs React Flow compatible graphs.
 
 ## 🧪 Isolated Service Verification
 
-You can execute diagnostic scripts directly to run verification tests:
+You can execute diagnostic scripts directly to run verification tests. Depending on your current working directory, run the commands from the root workspace or the `ai/` directory.
+
+### Running from the Root Workspace Directory (`c:\Users\user\OneDrive\Desktop\ai`)
+
+1. **Verify All Mock Tests**:
+   ```bash
+   node ai/test-cases.js
+   ```
+2. **Test Gemini Layer**:
+   ```bash
+   node ai/backend/services/geminiService.js
+   ```
+3. **Test Groq Layer**:
+   ```bash
+   node ai/backend/services/groqService.js
+   ```
+4. **Test Unified Router**:
+   ```bash
+   node ai/backend/services/llmService.js
+   ```
+
+### Running from the AI Sandbox Directory (`c:\Users\user\OneDrive\Desktop\ai\ai`)
 
 1. **Verify All Mock Tests**:
    ```bash
