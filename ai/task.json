@@ -1,0 +1,24 @@
+{
+  "tasks": [
+    {
+      "task": "Refactor backend/services/geminiService.js to use @google/genai with fallback support",
+      "status": "completed"
+    },
+    {
+      "task": "Refactor server.js to import the unified Gemini client and service helper",
+      "status": "completed"
+    },
+    {
+      "task": "Verify changes using the self-test script in backend/services/geminiService.js",
+      "status": "completed"
+    },
+    {
+      "task": "Verify API endpoint /api/analyze using the test cases script test-cases.js",
+      "status": "completed"
+    },
+    {
+      "task": "Clean up temporary workspace files",
+      "status": "completed"
+    }
+  ]
+}

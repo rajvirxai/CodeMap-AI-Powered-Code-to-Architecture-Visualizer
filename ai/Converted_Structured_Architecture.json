@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "Navbar_jsx",
+      "label": "Navbar.jsx",
+      "type": "frontend"
+    },
+    {
+      "id": "Sidebar_jsx",
+      "label": "Sidebar.jsx",
+      "type": "frontend"
+    },
+    {
+      "id": "Dashboard_jsx",
+      "label": "Dashboard.jsx",
+      "type": "frontend"
+    }
+  ],
+  "edges": [
+    {
+      "source": "Dashboard_jsx",
+      "target": "Navbar_jsx",
+      "relationship": "imports"
+    },
+    {
+      "source": "Dashboard_jsx",
+      "target": "Sidebar_jsx",
+      "relationship": "imports"
+    }
+  ]
+}

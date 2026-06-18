@@ -1,0 +1,28 @@
+{
+  "components": [
+    {
+      "name": "Navbar.jsx",
+      "type": "component"
+    },
+    {
+      "name": "Sidebar.jsx",
+      "type": "component"
+    },
+    {
+      "name": "Dashboard.jsx",
+      "type": "page"
+    }
+  ],
+  "relationships": [
+    {
+      "source": "Dashboard.jsx",
+      "target": "Navbar.jsx",
+      "type": "imports"
+    },
+    {
+      "source": "Dashboard.jsx",
+      "target": "Sidebar.jsx",
+      "type": "imports"
+    }
+  ]
+}
