@@ -51,10 +51,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start listening for incoming HTTP requests on the specified port
-app.listen(PORT, () => {
-  console.log(`========================================================`);
-  console.log(`🚀 Server is successfully running on http://localhost:${PORT}`);
-  console.log(`📌 Health check: GET http://localhost:${PORT}/health`);
-  console.log(`========================================================`);
-});
+// Start listening for incoming HTTP requests on the specified port if run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`========================================================`);
+    console.log(`🚀 Server is successfully running on http://localhost:${PORT}`);
+    console.log(`📌 Health check: GET http://localhost:${PORT}/health`);
+    console.log(`========================================================`);
+  });
+}
+
+module.exports = app;
+

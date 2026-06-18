@@ -14,38 +14,57 @@ function LoadingStateContent() {
   const apiFetched = useRef(false);
   const dataRef = useRef<any>(null);
 
-  // Default Mock File Tree Structure
+  // Default Mock File Tree Structure and Architecture
   const mockData = {
-    name: "my-app",
-    type: "folder",
-    children: [
-      {
-        name: "index.js",
-        type: "file",
-      },
-      {
-        name: "utils.js",
-        type: "file",
-      },
-      {
-        name: "components",
-        type: "folder",
-        children: [
-          {
-            name: "Dashboard.js",
-            type: "file",
-          },
-          {
-            name: "Sidebar.js",
-            type: "file",
-          }
-        ]
-      },
-      {
-        name: "package.json",
-        type: "file"
-      }
-    ]
+    fileTree: {
+      name: "my-app",
+      type: "folder",
+      children: [
+        {
+          name: "index.js",
+          type: "file",
+        },
+        {
+          name: "utils.js",
+          type: "file",
+        },
+        {
+          name: "components",
+          type: "folder",
+          children: [
+            {
+              name: "Dashboard.js",
+              type: "file",
+            },
+            {
+              name: "Sidebar.js",
+              type: "file",
+            }
+          ]
+        },
+        {
+          name: "package.json",
+          type: "file"
+        }
+      ]
+    },
+    architecture: {
+      entryPoint: "index.js",
+      modules: [
+        {
+          name: "Components",
+          type: "Component",
+          description: "Core UI layout and panel display components",
+          children: ["Dashboard.js", "Sidebar.js"]
+        },
+        {
+          name: "Utils",
+          type: "Utility",
+          description: "Helper files and calculations",
+          children: ["utils.js"]
+        }
+      ]
+    }
   };
 
   useEffect(() => {

@@ -8,7 +8,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const app = require('../index');
+const app = require('../backend/index');
 
 test('CodeMap Backend API Tests', async (t) => {
   let server;
