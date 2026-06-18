@@ -59,7 +59,7 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
 
 ### 🏆 Day 4: Prompt Improvement, Summary & End-to-End MVP
 * **Goal**: Switch to MongoDB database schema persistence, support codebase project summaries, and complete full visual rendering.
-* **Members**: Vaibhav Shaw (@Vaibhav Shaw), Oitrika (@~oitrika!💗)
+* **Members**: Vaibhav Shaw (@Vaibhav Shaw), Oitrika (@~oitrika!)
 * **Tasks**:
   * **Improve AI Model Prompts (Completed by Oitrika)**: Optimized prompts to generate `summary`, `nodes`, and `edges` inside a unified request:
     ```json

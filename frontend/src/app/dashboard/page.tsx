@@ -31,6 +31,7 @@ interface ArchitectureModule {
 interface Architecture {
   entryPoint: string;
   modules: ArchitectureModule[];
+  summary?: string;
 }
 
 export default function DashboardPage() {
@@ -192,6 +193,18 @@ export default function DashboardPage() {
           )}
         </div>
         
+        {/* Project Summary card */}
+        {architecture && architecture.summary && (
+          <div className="p-4 border-t border-zinc-900 bg-zinc-900/30 overflow-y-auto max-h-48">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-zinc-500 uppercase block mb-2">
+              Project Summary
+            </span>
+            <p className="text-[11px] font-sans text-zinc-400 leading-relaxed">
+              {architecture.summary}
+            </p>
+          </div>
+        )}
+
         {/* Footer info box */}
         <div className="p-4 border-t border-zinc-900 bg-zinc-950/60 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />

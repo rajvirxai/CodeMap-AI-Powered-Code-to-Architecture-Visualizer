@@ -48,8 +48,10 @@ Instructions:
    - "type": Its role type (e.g. Directory, Controller, Router, Component, Utility).
    - "description": A short one-sentence explanation of what it does.
    - "children": List up to 3 key files (filenames only, no paths) belonging to this module.
-4. Respond STRICTLY with a valid JSON object matching the schema:
+4. Generate a high-level summary of the repository's codebase and architecture in 2-3 sentences.
+5. Respond STRICTLY with a valid JSON object matching the schema:
 {
+  "summary": "string describing the high-level architecture of the repository in 2-3 sentences",
   "entryPoint": "string",
   "modules": [
     {
@@ -190,7 +192,11 @@ function generateFallbackArchitecture(fileTree) {
     });
   }
 
+  const displayName = fileTree && fileTree.name ? fileTree.name : 'project';
+  const summary = `Programmatic architecture analysis of the ${displayName} repository mapping out its entry point and core modules.`;
+
   return {
+    summary,
     entryPoint,
     modules
   };
