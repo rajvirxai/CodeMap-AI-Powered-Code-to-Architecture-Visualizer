@@ -6,8 +6,7 @@
     "backend": "npm run dev --prefix backend",
     "frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-    "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend",
-    "test": "node --test test/api.test.js"
+    "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend"
   },
   "keywords": [
     "concurrently"
