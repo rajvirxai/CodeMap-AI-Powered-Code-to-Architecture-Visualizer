@@ -12,7 +12,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { getHealth, uploadRepo, analyzeRepo, getArchitecture, analyzeRepoStream } = require('../controllers/repoController');
+const { getHealth, uploadRepo, analyzeRepo, cloneRepo } = require('../controllers/repoController');
 
 // Define where multer will save uploaded files (uploads/ directory in root)
 const uploadDir = path.join(__dirname, '../uploads');
@@ -44,9 +44,7 @@ const upload = multer({
     // Only accept .zip files
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext !== '.zip') {
-      const error = new Error('Only ZIP files are allowed');
-      error.status = 400;
-      return cb(error, false);
+      return cb(new Error('Only ZIP files are allowed'), false);
     }
     cb(null, true);
   }
@@ -75,17 +73,10 @@ router.post('/upload', upload.single('file'), uploadRepo);
 router.post('/analyze', analyzeRepo);
 
 /**
- * Endpoint 4: Fetch saved architecture JSON from database
- * Method: GET
- * Path: /architecture/:folderId
+ * Endpoint 4: Clone repository
+ * Method: POST
+ * Path: /clone
  */
-router.get('/architecture/:folderId', getArchitecture);
-
-/**
- * Endpoint 5: Stream real-time analysis progress
- * Method: GET
- * Path: /analyze-stream
- */
-router.get('/analyze-stream', analyzeRepoStream);
+router.post('/clone', cloneRepo);
 
 module.exports = router;
