@@ -291,3 +291,226 @@ To expand CodeMap's visualization capabilities, the following AI features are pl
 * [ ] **AI Project Summary**: Generate natural language READMEs, code documentation blocks, and high-level architectural walkthroughs based on parsed codebase patterns.
 * [ ] **Technology Detection & Quality Insights**: Identify deprecated dependencies, security risks, or code smell hot-spots on the architecture map.
 * [ ] **Confidence Score**: Display a reliability rating showing the AI's accuracy confidence when generating layout nodes and identifying hidden connections.
+
+---
+
+## 🚀 Getting Started — Full Setup Guide
+
+### Prerequisites
+
+Before running CodeMap, ensure you have the following installed:
+
+| Tool | Minimum Version | Check Command |
+|---|---|---|
+| Node.js | v18+ | `node --version` |
+| npm | v9+ | `npm --version` |
+| Git | any | `git --version` |
+
+---
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/rajvirxai/CodeMap-AI-Powered-Code-to-Architecture-Visualizer
+cd CodeMap-AI-Powered-Code-to-Architecture-Visualizer
+```
+
+---
+
+### Step 2: Configure Environment Variables
+
+Create a `.env` file in the **root workspace directory** (`c:\...\ai\`):
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+PORT=5000
+```
+
+> **Where to get API keys:**
+> - Gemini: https://aistudio.google.com/app/apikey
+> - Groq: https://console.groq.com/keys
+
+---
+
+### Step 3: Install All Dependencies
+
+Run this single command from the **root workspace directory** to install dependencies for all three services at once:
+
+```bash
+npm run install-all
+```
+
+This is equivalent to running `npm install` inside root, `backend/`, and `frontend/` separately.
+
+---
+
+### Step 4: Start All Services
+
+```bash
+npm run dev
+```
+
+This starts **both** the backend and frontend simultaneously using `concurrently`.
+
+---
+
+## 🌐 Accessing the Application
+
+Once `npm run dev` is running successfully, access each service at:
+
+| Service | URL | Description |
+|---|---|---|
+| **Frontend (UI)** | `http://localhost:3000` | Main CodeMap web application |
+| **Upload Page** | `http://localhost:3000/upload` | Upload ZIP or clone GitHub repo |
+| **Dashboard** | `http://localhost:3000/dashboard?folderId=<id>` | Architecture visualization canvas |
+| **Backend API** | `http://localhost:5000` | Express.js REST API server |
+| **Health Check** | `http://localhost:5000/health` | Verify backend is running |
+| **AI Sandbox** | `http://localhost:3001` | Standalone AI microservice (optional) |
+
+---
+
+### Running Services Individually (Optional)
+
+If you want to run each service separately:
+
+**Backend only:**
+```bash
+npm run backend
+# or from backend directory:
+node backend/index.js
+```
+
+**Frontend only:**
+```bash
+npm run frontend
+# or from frontend directory:
+npm run dev --prefix frontend
+```
+
+**AI Sandbox only (optional microservice):**
+```bash
+node ai/server.js
+```
+
+---
+
+## 🧪 Day-by-Day Testing Guide (Day 1 → Day 4)
+
+### ✅ Day 1 Test — API Connectivity
+
+Verify the backend is running and Gemini API is reachable:
+
+```bash
+# 1. Check backend health
+curl http://localhost:5000/health
+
+# 2. Run the AI sandbox test (tests raw Gemini API call)
+node ai/server.js
+```
+
+**Expected:** Backend responds `{ status: "ok" }`. AI sandbox starts on port 3001.
+
+---
+
+### ✅ Day 2 Test — Structured JSON Output from AI
+
+Test that the AI service returns properly structured architecture JSON:
+
+```bash
+# From root workspace directory
+node ai/test-cases.js
+```
+
+**Expected output:**
+```
+✅ Test 1 passed: analyzeRepository returns nodes and edges
+✅ Test 2 passed: generateContent returns string output
+✅ All tests passed.
+```
+
+You can also test individual AI service layers:
+```bash
+node ai/backend/services/geminiService.js   # Test Gemini layer
+node ai/backend/services/groqService.js     # Test Groq layer
+node ai/backend/services/llmService.js      # Test unified router (Gemini → Groq fallback)
+```
+
+---
+
+### ✅ Day 3 Test — End-to-End Pipeline (Upload → Analyze → Visualize)
+
+1. Open the browser and go to: **`http://localhost:3000/upload`**
+2. Select **"Upload ZIP"** tab
+3. Upload any ZIP of a code repository (e.g. a Node.js or React project)
+4. Click **"Generate CodeMap"**
+5. You will be redirected to the loading state page (`/loading-state`)
+6. After processing, you will be redirected to the **Dashboard** (`/dashboard`)
+
+**Expected:** Architecture canvas renders with nodes and connecting edges.
+
+---
+
+### ✅ Day 4 Test — AI Summary + Full MVP Verification
+
+This is the complete end-to-end MVP test:
+
+#### Test A: ZIP Upload Flow
+1. Go to **`http://localhost:3000/upload`**
+2. Upload a ZIP file of any GitHub repository
+3. Wait for processing (loading screen)
+4. On the Dashboard:
+   - ✅ **LEFT SIDEBAR** shows file tree explorer
+   - ✅ **LEFT SIDEBAR** shows **"PROJECT SUMMARY"** card with an AI-generated description
+   - ✅ **CANVAS** shows architecture nodes (Entry Point + Module nodes)
+   - ✅ **CANVAS** shows connecting edges between nodes
+
+#### Test B: GitHub URL Clone Flow
+1. Go to **`http://localhost:3000/upload`**
+2. Select **"Clone GitHub Repo"** tab
+3. Paste any GitHub URL (browser URL is fine, e.g. `https://github.com/user/repo/tree/main`)
+4. Click **"Generate CodeMap"**
+5. Same dashboard output expected as Test A ✅
+
+#### Test C: AI Summary Uniqueness Check
+Run two uploads with **different repositories** and confirm:
+- Summary 1 ≠ Summary 2
+- Each summary describes the specific repo's architecture
+
+#### Test D: Fallback Chain Verification
+Watch the backend terminal logs during an upload. You should see ONE of:
+```bash
+# Best case — Gemini working:
+🔮 GEMINI ANALYZER: Calling Gemini API for architecture analysis...
+
+# Gemini quota exceeded — Groq takes over:
+⚡ GEMINI ANALYZER: Calling Groq API as fallback for architecture analysis...
+
+# Both AIs unavailable — still works:
+ℹ️ GEMINI ANALYZER: Using programmatic fallback.
+```
+All three cases produce a working dashboard. ✅
+
+#### Test E: Backend API Direct Test (Optional)
+```bash
+curl -X POST http://localhost:5000/analyze \
+  -H "Content-Type: application/json" \
+  -d "{\"folderId\": \"<your-folder-id>\"}"
+```
+
+---
+
+## ✅ Day 4 End-of-Day Checklist
+
+Use this checklist to confirm the MVP is complete:
+
+- [ ] `npm run dev` starts without errors
+- [ ] `http://localhost:3000/upload` loads the upload page
+- [ ] ZIP upload redirects to loading state then dashboard
+- [ ] GitHub URL cloning works (any GitHub browser URL accepted)
+- [ ] Dashboard canvas renders architecture nodes and edges
+- [ ] Dashboard sidebar shows **PROJECT SUMMARY** with AI-generated text
+- [ ] Backend logs show which AI engine was used (Gemini / Groq / Programmatic)
+- [ ] `node ai/test-cases.js` passes all tests
+- [ ] `http://localhost:5000/health` returns status ok
+
