@@ -79,6 +79,7 @@ You will receive a JSON tree representing folders and files of a code repository
 
 GOAL:
 Infer the system architecture from the repository structure and return ONLY a valid JSON object with:
+- summary: high-level summary of the project codebase and its architecture
 - nodes: architectural entities
 - edges: relationships between entities
 
@@ -86,6 +87,7 @@ IMPORTANT RULES:
 1. Return only JSON. Do not add explanations, markdown, comments, or extra text.
 2. Use this exact output format:
 {
+  "summary": "Descriptive overview of the codebase.",
   "nodes": [],
   "edges": []
 }

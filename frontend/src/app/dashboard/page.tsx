@@ -49,7 +49,7 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
 
   const [treeData, setTreeData] = useState<FileNode | null>(null);
-  const [architectureData, setArchitectureData] = useState<{ nodes: Node[]; edges: Edge[] } | null>(null);
+  const [architectureData, setArchitectureData] = useState<{ summary?: string; nodes: Node[]; edges: Edge[] } | null>(null);
   const [activeFile, setActiveFile] = useState<string>('App.js');
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isExporting, setIsExporting] = useState(false);
@@ -516,12 +516,21 @@ function DashboardContent() {
           </div>
 
           <div className="border-t border-white/10 px-5 py-4">
-            <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-              <p className="text-[11px] leading-5 text-slate-400">
-                Select a file or node to inspect the architecture map from the tree on the right.
-              </p>
-            </div>
+            {architectureData?.summary ? (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 max-h-[220px] overflow-y-auto">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 mb-1">Project Summary</p>
+                <p className="text-[11px] leading-relaxed text-slate-400 font-sans">
+                  {architectureData.summary}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                <p className="text-[11px] leading-5 text-slate-400">
+                  Select a file or node to inspect the architecture map from the tree on the right.
+                </p>
+              </div>
+            )}
           </div>
         </aside>
 

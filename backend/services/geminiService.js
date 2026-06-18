@@ -27,9 +27,10 @@ const MODEL_NAME = 'gemini-2.5-flash';
  */
 function validateArchitecture(output) {
   if (!output || typeof output !== 'object') {
-    return { nodes: [], edges: [] };
+    return { summary: 'No summary provided.', nodes: [], edges: [] };
   }
 
+  const summary = typeof output.summary === 'string' ? output.summary : 'No summary provided.';
   const nodes = Array.isArray(output.nodes) ? output.nodes : [];
   const edges = Array.isArray(output.edges) ? output.edges : [];
 
@@ -69,7 +70,7 @@ function validateArchitecture(output) {
     }
   }
 
-  return { nodes: cleanedNodes, edges: cleanedEdges };
+  return { summary, nodes: cleanedNodes, edges: cleanedEdges };
 }
 
 /**
@@ -205,7 +206,10 @@ function generateFallbackResponse(repoStructure) {
     traverseFlat(repoStructure);
   }
 
-  return { nodes, edges };
+  const projectName = repoStructure && repoStructure.name ? repoStructure.name : 'Project';
+  const summary = `Fallback architecture map for ${projectName}. Constructed programmatically because the AI service was unavailable.`;
+
+  return { summary, nodes, edges };
 }
 
 /**
@@ -228,6 +232,7 @@ You will receive a JSON tree representing folders and files of a code repository
 
 GOAL:
 Infer the system architecture from the repository structure and return ONLY a valid JSON object with:
+- summary: high-level summary of the project codebase and its architecture
 - nodes: architectural entities
 - edges: relationships between entities
 
@@ -235,6 +240,7 @@ IMPORTANT RULES:
 1. Return only JSON. Do not add explanations, markdown, comments, or extra text.
 2. Use this exact output format:
 {
+  "summary": "Descriptive overview of the codebase.",
   "nodes": [],
   "edges": []
 }
@@ -289,6 +295,7 @@ OUTPUT QUALITY REQUIREMENTS:
         responseSchema: {
           type: Type.OBJECT,
           properties: {
+            summary: { type: Type.STRING },
             nodes: {
               type: Type.ARRAY,
               items: {
@@ -314,7 +321,7 @@ OUTPUT QUALITY REQUIREMENTS:
               }
             }
           },
-          required: ["nodes", "edges"]
+          required: ["summary", "nodes", "edges"]
         }
       }
     });
