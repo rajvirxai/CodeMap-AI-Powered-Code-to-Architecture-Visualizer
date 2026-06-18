@@ -11,9 +11,11 @@
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 const { scanDirectory } = require('../utils/repoScanner');
-const { analyzeRepository } = require('../services/llmService');
-const { Analysis } = require('../utils/db');
+const { analyzeArchitecture } = require('../utils/geminiAnalyzer');
 
 /**
  * 1. Health Check Endpoint
@@ -46,31 +48,17 @@ const uploadRepo = (req, res) => {
     // Generate a unique folder name using the current timestamp and clean original filename
     const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '');
     const folderId = `${Date.now()}-${cleanName}`;
-
+    
     // Resolve paths
     const zipFilePath = req.file.path;
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
     // Initialize AdmZip to extract the uploaded file
-    let zip;
-    try {
-      if (!fs.existsSync(zipFilePath)) {
-        return res.status(404).json({ error: 'Uploaded file not found on the server.' });
-      }
-      zip = new AdmZip(zipFilePath);
-    } catch (err) {
-      console.error('Invalid ZIP format:', err.message);
-      return res.status(400).json({ error: 'Invalid ZIP file. Please ensure the uploaded file is a valid ZIP archive.' });
-    }
+    const zip = new AdmZip(zipFilePath);
     
     // Extract all contents to target path.
     // The second parameter 'true' forces overwrite if files exist.
-    try {
-      zip.extractAllTo(extractPath, true);
-    } catch (err) {
-      console.error('Extraction failed:', err.message);
-      return res.status(500).json({ error: 'Failed to extract the ZIP file. It may be corrupted or unsupported.' });
-    }
+    zip.extractAllTo(extractPath, true);
 
     // Respond back with the unique folder ID that frontend can use to request analysis
     return res.status(200).json({
@@ -94,8 +82,6 @@ const uploadRepo = (req, res) => {
 const analyzeRepo = async (req, res) => {
   try {
     const { folderId } = req.body;
-    const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
-    const model = req.body.model || req.query.model || req.headers['x-model'];
 
     // Validate that folderId was provided in the request
     if (!folderId) {
@@ -115,28 +101,12 @@ const analyzeRepo = async (req, res) => {
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
 
-    if (!repoTree) {
-      return res.status(500).json({ error: 'Failed to scan the repository directory. File structure may be invalid or inaccessible.' });
-    }
+    // Analyze the repository structure using Gemini API
+    const architecture = await analyzeArchitecture(repoTree);
 
-    // Analyze the repository tree using the AI service
-    const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
-
-    // Save the analysis to the database
-    try {
-      await Analysis.findOneAndUpdate(
-        { folderId },
-        { repoTree, architecture },
-        { upsert: true, new: true }
-      );
-      console.log(`💾 Saved analysis successfully for: ${folderId}`);
-    } catch (dbErr) {
-      console.error('⚠️ Database save error:', dbErr.message);
-    }
-
-    // Return both the scanned tree and the AI-generated architecture graph
+    // Return the scanned tree and architecture analysis
     return res.status(200).json({
-      repoTree: repoTree,
+      fileTree: repoTree,
       architecture: architecture
     });
   } catch (error) {
@@ -149,96 +119,48 @@ const analyzeRepo = async (req, res) => {
 };
 
 /**
- * 4. Get Saved Architecture Endpoint
- * Retrieves the stored analysis matching folderId from SQLite.
+ * 4. Clone Repo Endpoint
+ * Clones a Git repository from a URL into the uploads folder.
  */
-const getArchitecture = async (req, res) => {
-  const { folderId } = req.params;
-
-  if (!folderId) {
-    return res.status(400).json({ error: 'Missing folderId parameter.' });
-  }
-
+const cloneRepo = async (req, res) => {
   try {
-    const record = await Analysis.findOne({ folderId });
-    if (!record) {
-      return res.status(404).json({ error: 'Architecture map not found in database.' });
+    const { repoUrl } = req.body;
+
+    if (!repoUrl) {
+      return res.status(400).json({ error: 'Missing repoUrl in request body.' });
     }
+
+    // Extract a clean name from the repo URL
+    let repoName = 'cloned-repo';
+    try {
+      const parsedUrl = new URL(repoUrl);
+      const pathname = parsedUrl.pathname;
+      const parts = pathname.split('/').filter(Boolean);
+      if (parts.length > 0) {
+        repoName = parts[parts.length - 1].replace(/\.git$/, '');
+      }
+    } catch (e) {
+      // Use fallback name
+    }
+
+    const cleanName = repoName.replace(/[^a-zA-Z0-9-_]/g, '');
+    const folderId = `clone-${Date.now()}-${cleanName}`;
+    const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
+
+    // Run git clone command with depth 1
+    console.log(`Cloning repository ${repoUrl} to ${extractPath}...`);
+    await execPromise(`git clone --depth 1 "${repoUrl}" "${extractPath}"`);
 
     return res.status(200).json({
-      repoTree: record.repoTree,
-      architecture: record.architecture
+      message: 'Repository cloned successfully',
+      folderId: folderId
     });
-  } catch (err) {
-    return res.status(500).json({ error: 'Database query failed', details: err.message });
-  }
-};
-/**
- * 5. Stream Analysis Endpoint
- * Streams real-time progress events using Server-Sent Events (SSE).
- */
-const analyzeRepoStream = async (req, res) => {
-  const { folderId } = req.query;
-  const provider = req.query.provider || 'gemini';
-  const model = req.query.model;
-
-  // Set headers for Server-Sent Events (SSE)
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*' // Support CORS for EventSource
-  });
-
-  const sendEvent = (log, progress, status = 'processing', data = null) => {
-    res.write(`data: ${JSON.stringify({ log, progress, status, data })}\n\n`);
-  };
-
-  try {
-    if (!folderId) {
-      sendEvent('Error: Missing folderId parameter.', 0, 'error');
-      return res.end();
-    }
-
-    const folderPath = path.join(__dirname, '../uploads/extracted', folderId);
-    if (!fs.existsSync(folderPath)) {
-      sendEvent('Error: Uploaded folder not found.', 0, 'error');
-      return res.end();
-    }
-
-    // Step 1: Scanning Folder Structure
-    sendEvent('• Reading file tree...', 25);
-    const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
-    const repoTree = scanDirectory(folderPath, folderDisplayName);
-
-    if (!repoTree) {
-      sendEvent('Error: Failed to scan the directory. File structure may be invalid or inaccessible.', 0, 'error');
-      return res.end();
-    }
-
-    // Step 2: Running LLM Dependency Analysis
-    sendEvent('• Parsing code dependencies...', 50);
-    const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
-
-    // Step 3: Mapping & Storing in DB
-    sendEvent('• Mapping architecture nodes...', 75);
-    try {
-      await Analysis.findOneAndUpdate(
-        { folderId },
-        { repoTree, architecture },
-        { upsert: true }
-      );
-    } catch (err) {
-      console.error('⚠️ Database save error inside stream:', err.message);
-    }
-
-    // Step 4: Complete
-    sendEvent('✓ Complete! Launching dashboard...', 100, 'complete', { repoTree, architecture });
-    res.end();
   } catch (error) {
-    console.error('Error during streaming analysis:', error);
-    sendEvent(`Error: ${error.message}`, 0, 'error');
-    res.end();
+    console.error('Error during repository cloning:', error);
+    return res.status(500).json({
+      error: 'Failed to clone the git repository',
+      details: error.message
+    });
   }
 };
 
@@ -246,6 +168,5 @@ module.exports = {
   getHealth,
   uploadRepo,
   analyzeRepo,
-  getArchitecture,
-  analyzeRepoStream
+  cloneRepo
 };
