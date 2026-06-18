@@ -1,32 +1,41 @@
-const sqlite3 = require('sqlite3').verbose();
+const mongoose = require('mongoose');
 const path = require('path');
 
-const dbPath = path.join(__dirname, '../database.sqlite');
+// Load environment variables
+require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Failed to connect to SQLite database:', err.message);
-  } else {
-    console.log('🔌 Connected to SQLite database successfully.');
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/codemap';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('🔌 Connected to MongoDB database successfully.');
+  })
+  .catch((err) => {
+    console.error('❌ Failed to connect to MongoDB database:', err.message);
+  });
+
+// Schema representing the analysis results
+const analysisSchema = new mongoose.Schema({
+  folderId: { 
+    type: String, 
+    required: true, 
+    unique: true 
+  },
+  repoTree: { 
+    type: mongoose.Schema.Types.Mixed, 
+    required: true 
+  },
+  architecture: { 
+    type: mongoose.Schema.Types.Mixed, 
+    required: true 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
   }
 });
 
-// Initialize table on startup
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS analyses (
-      folderId TEXT PRIMARY KEY,
-      repoTree TEXT NOT NULL,
-      architecture TEXT NOT NULL,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `, (err) => {
-    if (err) {
-      console.error('❌ Error creating analyses table:', err.message);
-    } else {
-      console.log('📊 Analyses table created or already exists.');
-    }
-  });
-});
+const Analysis = mongoose.model('Analysis', analysisSchema);
 
-module.exports = db;
+module.exports = { mongoose, Analysis };

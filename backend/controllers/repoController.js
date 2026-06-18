@@ -13,7 +13,7 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const { scanDirectory } = require('../utils/repoScanner');
 const { analyzeRepository } = require('../services/llmService');
-const db = require('../utils/db');
+const { Analysis } = require('../utils/db');
 
 /**
  * 1. Health Check Endpoint
@@ -123,17 +123,16 @@ const analyzeRepo = async (req, res) => {
     const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
 
     // Save the analysis to the database
-    db.run(
-      `INSERT OR REPLACE INTO analyses (folderId, repoTree, architecture) VALUES (?, ?, ?)`,
-      [folderId, JSON.stringify(repoTree), JSON.stringify(architecture)],
-      (err) => {
-        if (err) {
-          console.error('⚠️ Database save error:', err.message);
-        } else {
-          console.log(`💾 Saved analysis successfully for: ${folderId}`);
-        }
-      }
-    );
+    try {
+      await Analysis.findOneAndUpdate(
+        { folderId },
+        { repoTree, architecture },
+        { upsert: true, new: true }
+      );
+      console.log(`💾 Saved analysis successfully for: ${folderId}`);
+    } catch (dbErr) {
+      console.error('⚠️ Database save error:', dbErr.message);
+    }
 
     // Return both the scanned tree and the AI-generated architecture graph
     return res.status(200).json({
@@ -153,30 +152,26 @@ const analyzeRepo = async (req, res) => {
  * 4. Get Saved Architecture Endpoint
  * Retrieves the stored analysis matching folderId from SQLite.
  */
-const getArchitecture = (req, res) => {
+const getArchitecture = async (req, res) => {
   const { folderId } = req.params;
 
   if (!folderId) {
     return res.status(400).json({ error: 'Missing folderId parameter.' });
   }
 
-  db.get(`SELECT repoTree, architecture FROM analyses WHERE folderId = ?`, [folderId], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database query failed', details: err.message });
-    }
-    if (!row) {
+  try {
+    const record = await Analysis.findOne({ folderId });
+    if (!record) {
       return res.status(404).json({ error: 'Architecture map not found in database.' });
     }
 
-    try {
-      return res.status(200).json({
-        repoTree: JSON.parse(row.repoTree),
-        architecture: JSON.parse(row.architecture)
-      });
-    } catch (parseErr) {
-      return res.status(500).json({ error: 'Failed to parse database records.' });
-    }
-  });
+    return res.status(200).json({
+      repoTree: record.repoTree,
+      architecture: record.architecture
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Database query failed', details: err.message });
+  }
 };
 /**
  * 5. Stream Analysis Endpoint
@@ -227,15 +222,15 @@ const analyzeRepoStream = async (req, res) => {
 
     // Step 3: Mapping & Storing in DB
     sendEvent('• Mapping architecture nodes...', 75);
-    db.run(
-      `INSERT OR REPLACE INTO analyses (folderId, repoTree, architecture) VALUES (?, ?, ?)`,
-      [folderId, JSON.stringify(repoTree), JSON.stringify(architecture)],
-      (err) => {
-        if (err) {
-          console.error('⚠️ Database save error inside stream:', err.message);
-        }
-      }
-    );
+    try {
+      await Analysis.findOneAndUpdate(
+        { folderId },
+        { repoTree, architecture },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.error('⚠️ Database save error inside stream:', err.message);
+    }
 
     // Step 4: Complete
     sendEvent('✓ Complete! Launching dashboard...', 100, 'complete', { repoTree, architecture });
