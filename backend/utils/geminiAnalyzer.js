@@ -85,11 +85,85 @@ Instructions:
       }
       throw new Error('Empty response from Gemini API');
     } catch (error) {
-      console.warn('⚠️ GEMINI ANALYZER WARNING: Gemini API call failed. Using fallback heuristics. Error:', error.message);
-      return generateFallbackArchitecture(fileTree);
+      console.warn('⚠️ GEMINI ANALYZER WARNING: Gemini API call failed. Trying Groq fallback. Error:', error.message);
+      return analyzeWithGroq(fileTree);
     }
   } else {
-    console.log('ℹ️ GEMINI ANALYZER: No GEMINI_API_KEY detected in environment. Using smart fallback heuristics.');
+    console.log('ℹ️ GEMINI ANALYZER: No GEMINI_API_KEY detected. Trying Groq fallback...');
+    return analyzeWithGroq(fileTree);
+  }
+}
+
+/**
+ * Groq fallback analyzer — called when Gemini is unavailable or rate-limited.
+ *
+ * @param {object} fileTree - The JSON tree structure of the repository.
+ * @returns {Promise<object>} The Architecture JSON representation.
+ */
+async function analyzeWithGroq(fileTree) {
+  const groqKey = process.env.GROQ_API_KEY;
+
+  if (!groqKey) {
+    console.log('ℹ️ GEMINI ANALYZER: No GROQ_API_KEY detected. Using programmatic fallback.');
+    return generateFallbackArchitecture(fileTree);
+  }
+
+  try {
+    console.log('⚡ GEMINI ANALYZER: Calling Groq API as fallback for architecture analysis...');
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert software architect. Respond ONLY with valid JSON, no markdown, no explanation.'
+          },
+          {
+            role: 'user',
+            content: `Analyze the following directory tree of a codebase and extract its high-level architecture.
+
+File Tree JSON:
+${JSON.stringify(fileTree, null, 2)}
+
+Respond STRICTLY with this JSON schema:
+{
+  "summary": "2-3 sentence description of the codebase architecture",
+  "entryPoint": "main entry filename",
+  "modules": [
+    {
+      "name": "module name",
+      "type": "Directory|Controller|Router|Component|Utility|Service|Database|Hook",
+      "description": "one sentence description",
+      "children": ["filename1", "filename2"]
+    }
+  ]
+}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2048
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim();
+
+    if (!text) throw new Error('Empty response from Groq API');
+
+    // Strip markdown code fences if present
+    const clean = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    return JSON.parse(clean);
+  } catch (error) {
+    console.warn('⚠️ GEMINI ANALYZER WARNING: Groq API call also failed. Using programmatic fallback. Error:', error.message);
     return generateFallbackArchitecture(fileTree);
   }
 }
