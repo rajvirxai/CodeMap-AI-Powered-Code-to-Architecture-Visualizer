@@ -1,10 +1,13 @@
-const dotenv = require('dotenv');
-const path = require('path');
-const { generateFallbackResponse, validateArchitecture } = require('./geminiService');
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { generateFallbackResponse, validateArchitecture } from './geminiService.js';
 
 // Load environment variables
 dotenv.config();
 if (!process.env.GROQ_API_KEY) {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 }
 
@@ -15,6 +18,18 @@ if (!apiKey) {
 }
 
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+
+/**
+ * Basic Hello World test function for Groq
+ */
+async function testGroq() {
+  try {
+    const text = await generateContent('Say Hello');
+    console.log('Groq Response:', text);
+  } catch (error) {
+    console.error('Error generating content from Groq:', error.message);
+  }
+}
 
 /**
  * Generates text content using the Groq API.
@@ -79,7 +94,7 @@ You will receive a JSON tree representing folders and files of a code repository
 
 GOAL:
 Infer the system architecture from the repository structure and return ONLY a valid JSON object with:
-- summary: high-level summary of the project codebase and its architecture
+- summary: project overview
 - nodes: architectural entities
 - edges: relationships between entities
 
@@ -87,7 +102,7 @@ IMPORTANT RULES:
 1. Return only JSON. Do not add explanations, markdown, comments, or extra text.
 2. Use this exact output format:
 {
-  "summary": "Descriptive overview of the codebase.",
+  "summary": "",
   "nodes": [],
   "edges": []
 }
@@ -114,7 +129,13 @@ IMPORTANT RULES:
 10. Preserve hierarchy when useful, but compress redundant low-level details.
 11. If the repository is small, output a compact architecture. If it is large, group related folders into logical modules.
 12. The response must be valid JSON and parseable by standard JSON parsers.
-
+13. Generate a concise project summary (2-5 sentences).
+14. The summary should explain:
+   - Project type
+   - Main modules
+   - Architectural layers
+   - Key responsibilities
+15. The summary must be concise and under 100 words.
 ANALYSIS APPROACH:
 - Identify the major layers of the application.
 - Detect relationships such as:
@@ -175,8 +196,31 @@ OUTPUT QUALITY REQUIREMENTS:
   }
 }
 
-module.exports = {
-  DEFAULT_MODEL,
-  generateContent,
-  analyzeRepository
-};
+// Automatically run the test if run directly
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isDirectRun) {
+  console.log('--- Testing Groq basic Hello ---');
+  await testGroq();
+
+  console.log('\n--- Testing Groq analyzeRepository ---');
+  const exampleInput = {
+    "src": {
+      "components": [
+        "Navbar.jsx",
+        "Sidebar.jsx"
+      ],
+      "pages": [
+        "Dashboard.jsx"
+      ]
+    }
+  };
+
+  try {
+    const analysis = await analyzeRepository(exampleInput);
+    console.log(JSON.stringify(analysis, null, 2));
+  } catch (error) {
+    console.error('Groq Analysis test failed:', error);
+  }
+}
+
+export { DEFAULT_MODEL, testGroq, generateContent, analyzeRepository };

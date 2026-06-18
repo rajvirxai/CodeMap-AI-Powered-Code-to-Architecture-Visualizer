@@ -27,13 +27,15 @@ const MODEL_NAME = 'gemini-2.5-flash';
  */
 function validateArchitecture(output) {
   if (!output || typeof output !== 'object') {
-    return { summary: 'No summary provided.', nodes: [], edges: [] };
+    return { summary: "", nodes: [], edges: [] };
   }
 
-  const summary = typeof output.summary === 'string' ? output.summary : 'No summary provided.';
   const nodes = Array.isArray(output.nodes) ? output.nodes : [];
   const edges = Array.isArray(output.edges) ? output.edges : [];
-
+  const summary = 
+    typeof output.summary === 'string'
+    ? output.summary.trim()
+    : '';
   const validTypes = new Set(['frontend', 'backend', 'database', 'api', 'service', 'utility', 'config', 'auth', 'storage', 'other']);
 
   const cleanedNodes = [];
@@ -206,10 +208,11 @@ function generateFallbackResponse(repoStructure) {
     traverseFlat(repoStructure);
   }
 
-  const projectName = repoStructure && repoStructure.name ? repoStructure.name : 'Project';
-  const summary = `Fallback architecture map for ${projectName}. Constructed programmatically because the AI service was unavailable.`;
-
-  return { summary, nodes, edges };
+  return {
+  summary: "Architecture generated using fallback parser.",
+  nodes,
+  edges
+};
 }
 
 /**
@@ -232,7 +235,7 @@ You will receive a JSON tree representing folders and files of a code repository
 
 GOAL:
 Infer the system architecture from the repository structure and return ONLY a valid JSON object with:
-- summary: high-level summary of the project codebase and its architecture
+- summary: project overview
 - nodes: architectural entities
 - edges: relationships between entities
 
@@ -240,7 +243,7 @@ IMPORTANT RULES:
 1. Return only JSON. Do not add explanations, markdown, comments, or extra text.
 2. Use this exact output format:
 {
-  "summary": "Descriptive overview of the codebase.",
+  "summary": "",
   "nodes": [],
   "edges": []
 }
@@ -267,7 +270,13 @@ IMPORTANT RULES:
 10. Preserve hierarchy when useful, but compress redundant low-level details.
 11. If the repository is small, output a compact architecture. If it is large, group related folders into logical modules.
 12. The response must be valid JSON and parseable by standard JSON parsers.
-
+13. Generate a concise project summary (2-5 sentences).
+14. The summary should explain:
+   - Project type
+   - Main modules
+   - Architectural layers
+   - Key responsibilities
+15. The summary must be concise and under 100 words.
 ANALYSIS APPROACH:
 - Identify the major layers of the application.
 - Detect relationships such as:
@@ -295,7 +304,9 @@ OUTPUT QUALITY REQUIREMENTS:
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            summary: { type: Type.STRING },
+            summary: {
+              type: Type.STRING
+            },
             nodes: {
               type: Type.ARRAY,
               items: {
