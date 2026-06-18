@@ -6,6 +6,7 @@
  * 1. Health check (GET /health)
  * 2. Uploading a ZIP (POST /upload)
  * 3. Scanning and analyzing the extracted folder (POST /analyze)
+ * 4. Cloning a repository from a Git URL (POST /clone)
  */
 
 const fs = require('fs');
@@ -16,6 +17,7 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const { scanDirectory } = require('../utils/repoScanner');
 const { analyzeArchitecture } = require('../utils/geminiAnalyzer');
+const { mongoose, Analysis } = require('../utils/db');
 
 /**
  * 1. Health Check Endpoint
@@ -104,7 +106,24 @@ const analyzeRepo = async (req, res) => {
     // Analyze the repository structure using Gemini API
     const architecture = await analyzeArchitecture(repoTree);
 
+    // Save the analysis to the MongoDB database if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await Analysis.findOneAndUpdate(
+          { folderId },
+          { repoTree, architecture },
+          { upsert: true, new: true }
+        );
+        console.log(`💾 Saved analysis successfully for: ${folderId}`);
+      } catch (dbErr) {
+        console.error('⚠️ Database save error:', dbErr.message);
+      }
+    } else {
+      console.warn('⚠️ MongoDB not connected. Skipping database write.');
+    }
+
     // Return the scanned tree and architecture analysis
+    // Uses fileTree key to match the frontend expectations
     return res.status(200).json({
       fileTree: repoTree,
       architecture: architecture

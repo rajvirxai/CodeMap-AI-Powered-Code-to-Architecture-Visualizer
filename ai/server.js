@@ -14,7 +14,7 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
