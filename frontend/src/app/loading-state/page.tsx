@@ -16,52 +16,78 @@ function LoadingStateContent() {
   // Default Mock File Tree Structure and Architecture
   const mockData = {
     repoTree: {
-      name: "my-app",
+      name: "ecommerce-app",
       type: "folder",
       children: [
-        {
-          name: "index.js",
-          type: "file",
-        },
-        {
-          name: "utils.js",
-          type: "file",
-        },
         {
           name: "components",
           type: "folder",
           children: [
-            {
-              name: "Dashboard.js",
-              type: "file",
-            },
-            {
-              name: "Sidebar.js",
-              type: "file",
-            }
+            { name: "ProductCard.tsx", type: "file" },
+            { name: "Cart.tsx", type: "file" },
+            { name: "Navbar.tsx", type: "file" }
           ]
         },
         {
-          name: "package.json",
-          type: "file"
-        }
+          name: "controllers",
+          type: "folder",
+          children: [
+            { name: "authController.js", type: "file" },
+            { name: "productController.js", type: "file" },
+            { name: "orderController.js", type: "file" }
+          ]
+        },
+        {
+          name: "routes",
+          type: "folder",
+          children: [
+            { name: "authRoutes.js", type: "file" },
+            { name: "orderRoutes.js", type: "file" }
+          ]
+        },
+        {
+          name: "models",
+          type: "folder",
+          children: [
+            { name: "User.js", type: "file" },
+            { name: "Product.js", type: "file" },
+            { name: "Order.js", type: "file" }
+          ]
+        },
+        {
+          name: "services",
+          type: "folder",
+          children: [
+            { name: "paymentService.js", type: "file" },
+            { name: "emailService.js", type: "file" }
+          ]
+        },
+        {
+          name: "utils",
+          type: "folder",
+          children: [
+            { name: "db.js", type: "file" }
+          ]
+        },
+        { name: "package.json", type: "file" }
       ]
     },
     architecture: {
-      entryPoint: "index.js",
-      modules: [
-        {
-          name: "Components",
-          type: "Component",
-          description: "Core UI layout and panel display components",
-          children: ["Dashboard.js", "Sidebar.js"]
-        },
-        {
-          name: "Utils",
-          type: "Utility",
-          description: "Helper files and calculations",
-          children: ["utils.js"]
-        }
+      summary: "An enterprise-grade e-commerce application. The Next.js frontend handles product catalog rendering, inventory displays, cart logic, and authentication checks. It invokes REST endpoints handled by Express routing, which queries a MongoDB database using Mongoose schemas for orders/products, and integrates with the Stripe SDK for payments.",
+      nodes: [
+        { id: "ecommerce_app_components", label: "Next.js Web Client", type: "frontend" },
+        { id: "ecommerce_app_routes", label: "Express REST Gateway", type: "api" },
+        { id: "ecommerce_app_controllers", label: "Controllers Layer", type: "backend" },
+        { id: "ecommerce_app_services", label: "Stripe Payment Service", type: "service" },
+        { id: "ecommerce_app_models", label: "MongoDB Database Models", type: "database" },
+        { id: "ecommerce_app_utils_db_js", label: "Database Connection", type: "database" }
+      ],
+      edges: [
+        { source: "ecommerce_app_components", target: "ecommerce_app_routes", relationship: "REST Calls" },
+        { source: "ecommerce_app_routes", target: "ecommerce_app_controllers", relationship: "Routes to" },
+        { source: "ecommerce_app_controllers", target: "ecommerce_app_services", relationship: "Delegates to" },
+        { source: "ecommerce_app_controllers", target: "ecommerce_app_models", relationship: "Queries" },
+        { source: "ecommerce_app_models", target: "ecommerce_app_utils_db_js", relationship: "Uses Connection" }
       ]
     }
   };
