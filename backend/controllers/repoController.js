@@ -149,14 +149,33 @@ const cloneRepo = async (req, res) => {
       return res.status(400).json({ error: 'Missing repoUrl in request body.' });
     }
 
-    // Extract a clean name from the repo URL
+    // Sanitize GitHub browser URLs to extract the base clone URL.
+    // Users often paste URLs like:
+    //   https://github.com/user/repo/tree/main
+    //   https://github.com/user/repo/blob/main/file.js
+    //   https://github.com/user/repo/issues
+    // Git clone only accepts: https://github.com/user/repo
+    let cleanRepoUrl = repoUrl.trim();
+    try {
+      const parsedUrl = new URL(cleanRepoUrl);
+      const parts = parsedUrl.pathname.split('/').filter(Boolean);
+      // GitHub repo path is always /owner/repo — everything after is browser navigation
+      if (parts.length >= 2) {
+        const owner = parts[0];
+        const repo = parts[1].replace(/\.git$/, '');
+        cleanRepoUrl = `${parsedUrl.protocol}//${parsedUrl.host}/${owner}/${repo}`;
+      }
+    } catch (e) {
+      // If URL parsing fails, use original URL as-is
+    }
+
+    // Extract a clean name from the sanitized URL
     let repoName = 'cloned-repo';
     try {
-      const parsedUrl = new URL(repoUrl);
-      const pathname = parsedUrl.pathname;
-      const parts = pathname.split('/').filter(Boolean);
-      if (parts.length > 0) {
-        repoName = parts[parts.length - 1].replace(/\.git$/, '');
+      const parsedUrl = new URL(cleanRepoUrl);
+      const parts = parsedUrl.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        repoName = parts[1].replace(/\.git$/, '');
       }
     } catch (e) {
       // Use fallback name
@@ -166,9 +185,9 @@ const cloneRepo = async (req, res) => {
     const folderId = `clone-${Date.now()}-${cleanName}`;
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
-    // Run git clone command with depth 1
-    console.log(`Cloning repository ${repoUrl} to ${extractPath}...`);
-    await execPromise(`git clone --depth 1 "${repoUrl}" "${extractPath}"`);
+    // Run git clone command with depth 1 using the sanitized URL
+    console.log(`Cloning repository ${cleanRepoUrl} to ${extractPath}...`);
+    await execPromise(`git clone --depth 1 "${cleanRepoUrl}" "${extractPath}"`);
 
     return res.status(200).json({
       message: 'Repository cloned successfully',
