@@ -79,6 +79,30 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
   * [x] **Receive architecture JSON**: Validated JSON matches target output structure containing project summary.
   * [x] **Display the result on the frontend**: Visualizes nodes and edges on the Next.js canvas, and renders the project summary card in the sidebar.
 
+#### ✅ Day 4 Criteria — Full Verification (AI Team, Team 3)
+
+| # | Success Criteria | Status | How It's Done |
+|---|---|---|---|
+| 1 | **Upload a repository** | ✅ Done | Upload page accepts ZIP files AND GitHub URLs (clone). Backend auto-sanitizes browser URLs (strips `/tree/`, `/blob/`, etc.) before cloning. |
+| 2 | **Scan its structure** | ✅ Done | `repoController.js` recursively walks the extracted directory and builds a `fileTree` JSON object. |
+| 3 | **Send the structure to Gemini** | ✅ Done | `geminiAnalyzer.js` sends the file tree + sampled code content to the Gemini API via REST. |
+| 4 | **Receive architecture JSON** | ✅ Done | Gemini returns structured JSON with `entryPoint`, `modules`, `summary`, `nodes`, and `edges` — Groq serves as automatic fallback if Gemini is throttled. |
+| 5 | **Display result on frontend** | ✅ Done | Dashboard page renders the architecture canvas with nodes/edges, the file tree in the sidebar, and the AI-generated project summary card. |
+
+**Day 4 criteria: 5/5 ✅ — Fully satisfied.**
+
+#### 🏅 Bonus — Beyond the Minimum Day 4 Requirements
+
+The AI Team delivered additional features beyond the baseline success criteria:
+
+| Bonus Feature | Description |
+|---|---|
+| 🔄 **Groq Fallback** | If Gemini is unavailable or rate-limited, Groq (`llama-3.3-70b`) automatically takes over — zero downtime for the user. |
+| 🛡️ **Programmatic Fallback** | If both AI APIs fail, a heuristic directory parser reconstructs a functional architecture graph — 100% request success rate. |
+| 💾 **MongoDB Persistence** | Generated architecture results are saved to MongoDB via Mongoose. Degrades gracefully to in-memory mode if the database is offline. |
+| 🔗 **GitHub URL Cloning** | Users can input any GitHub URL (including browser URLs with `/tree/main`) — backend sanitizes and clones the correct base repository. |
+| ⚡ **Loading State Page** | Proper UX feedback page (`/loading-state`) with animated progress while the AI pipeline processes the repository. |
+
 ---
 
 ## 👥 Team Collaboration Model
