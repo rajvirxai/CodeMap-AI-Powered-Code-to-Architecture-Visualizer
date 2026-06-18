@@ -46,17 +46,31 @@ const uploadRepo = (req, res) => {
     // Generate a unique folder name using the current timestamp and clean original filename
     const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '');
     const folderId = `${Date.now()}-${cleanName}`;
-    
+
     // Resolve paths
     const zipFilePath = req.file.path;
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
     // Initialize AdmZip to extract the uploaded file
-    const zip = new AdmZip(zipFilePath);
+    let zip;
+    try {
+      if (!fs.existsSync(zipFilePath)) {
+        return res.status(404).json({ error: 'Uploaded file not found on the server.' });
+      }
+      zip = new AdmZip(zipFilePath);
+    } catch (err) {
+      console.error('Invalid ZIP format:', err.message);
+      return res.status(400).json({ error: 'Invalid ZIP file. Please ensure the uploaded file is a valid ZIP archive.' });
+    }
     
     // Extract all contents to target path.
     // The second parameter 'true' forces overwrite if files exist.
-    zip.extractAllTo(extractPath, true);
+    try {
+      zip.extractAllTo(extractPath, true);
+    } catch (err) {
+      console.error('Extraction failed:', err.message);
+      return res.status(500).json({ error: 'Failed to extract the ZIP file. It may be corrupted or unsupported.' });
+    }
 
     // Respond back with the unique folder ID that frontend can use to request analysis
     return res.status(200).json({
@@ -100,6 +114,10 @@ const analyzeRepo = async (req, res) => {
     // We pass 'project' (or the original project folder name) as the root node name
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
+
+    if (!repoTree) {
+      return res.status(500).json({ error: 'Failed to scan the repository directory. File structure may be invalid or inaccessible.' });
+    }
 
     // Analyze the repository tree using the AI service
     const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
@@ -197,6 +215,11 @@ const analyzeRepoStream = async (req, res) => {
     sendEvent('• Reading file tree...', 25);
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
+
+    if (!repoTree) {
+      sendEvent('Error: Failed to scan the directory. File structure may be invalid or inaccessible.', 0, 'error');
+      return res.end();
+    }
 
     // Step 2: Running LLM Dependency Analysis
     sendEvent('• Parsing code dependencies...', 50);
