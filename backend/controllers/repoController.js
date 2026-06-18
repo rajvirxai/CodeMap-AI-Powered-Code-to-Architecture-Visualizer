@@ -13,6 +13,7 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const { scanDirectory } = require('../utils/repoScanner');
 const { analyzeRepository } = require('../services/llmService');
+const db = require('../utils/db');
 
 /**
  * 1. Health Check Endpoint
@@ -103,6 +104,19 @@ const analyzeRepo = async (req, res) => {
     // Analyze the repository tree using the AI service
     const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
 
+    // Save the analysis to the database
+    db.run(
+      `INSERT OR REPLACE INTO analyses (folderId, repoTree, architecture) VALUES (?, ?, ?)`,
+      [folderId, JSON.stringify(repoTree), JSON.stringify(architecture)],
+      (err) => {
+        if (err) {
+          console.error('⚠️ Database save error:', err.message);
+        } else {
+          console.log(`💾 Saved analysis successfully for: ${folderId}`);
+        }
+      }
+    );
+
     // Return both the scanned tree and the AI-generated architecture graph
     return res.status(200).json({
       repoTree: repoTree,
@@ -117,8 +131,103 @@ const analyzeRepo = async (req, res) => {
   }
 };
 
+/**
+ * 4. Get Saved Architecture Endpoint
+ * Retrieves the stored analysis matching folderId from SQLite.
+ */
+const getArchitecture = (req, res) => {
+  const { folderId } = req.params;
+
+  if (!folderId) {
+    return res.status(400).json({ error: 'Missing folderId parameter.' });
+  }
+
+  db.get(`SELECT repoTree, architecture FROM analyses WHERE folderId = ?`, [folderId], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database query failed', details: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: 'Architecture map not found in database.' });
+    }
+
+    try {
+      return res.status(200).json({
+        repoTree: JSON.parse(row.repoTree),
+        architecture: JSON.parse(row.architecture)
+      });
+    } catch (parseErr) {
+      return res.status(500).json({ error: 'Failed to parse database records.' });
+    }
+  });
+};
+/**
+ * 5. Stream Analysis Endpoint
+ * Streams real-time progress events using Server-Sent Events (SSE).
+ */
+const analyzeRepoStream = async (req, res) => {
+  const { folderId } = req.query;
+  const provider = req.query.provider || 'gemini';
+  const model = req.query.model;
+
+  // Set headers for Server-Sent Events (SSE)
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*' // Support CORS for EventSource
+  });
+
+  const sendEvent = (log, progress, status = 'processing', data = null) => {
+    res.write(`data: ${JSON.stringify({ log, progress, status, data })}\n\n`);
+  };
+
+  try {
+    if (!folderId) {
+      sendEvent('Error: Missing folderId parameter.', 0, 'error');
+      return res.end();
+    }
+
+    const folderPath = path.join(__dirname, '../uploads/extracted', folderId);
+    if (!fs.existsSync(folderPath)) {
+      sendEvent('Error: Uploaded folder not found.', 0, 'error');
+      return res.end();
+    }
+
+    // Step 1: Scanning Folder Structure
+    sendEvent('• Reading file tree...', 25);
+    const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
+    const repoTree = scanDirectory(folderPath, folderDisplayName);
+
+    // Step 2: Running LLM Dependency Analysis
+    sendEvent('• Parsing code dependencies...', 50);
+    const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
+
+    // Step 3: Mapping & Storing in DB
+    sendEvent('• Mapping architecture nodes...', 75);
+    db.run(
+      `INSERT OR REPLACE INTO analyses (folderId, repoTree, architecture) VALUES (?, ?, ?)`,
+      [folderId, JSON.stringify(repoTree), JSON.stringify(architecture)],
+      (err) => {
+        if (err) {
+          console.error('⚠️ Database save error inside stream:', err.message);
+        }
+      }
+    );
+
+    // Step 4: Complete
+    sendEvent('✓ Complete! Launching dashboard...', 100, 'complete', { repoTree, architecture });
+    res.end();
+  } catch (error) {
+    console.error('Error during streaming analysis:', error);
+    sendEvent(`Error: ${error.message}`, 0, 'error');
+    res.end();
+  }
+};
+
 module.exports = {
   getHealth,
   uploadRepo,
-  analyzeRepo
+  analyzeRepo,
+  getArchitecture,
+  analyzeRepoStream
 };

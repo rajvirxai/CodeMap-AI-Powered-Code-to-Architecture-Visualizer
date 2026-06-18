@@ -9,14 +9,13 @@ function LoadingStateContent() {
   const folderId = searchParams.get('folderId') || 'mock-app';
   const isMock = folderId.startsWith('git-') || folderId === 'mock-app';
 
-  const [progress, setProgress] = useState(65); // Simulating starting at 65% as in wireframe
+  const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
-  const apiFetched = useRef(false);
-  const dataRef = useRef<any>(null);
+  const connectionOpened = useRef(false);
 
   // Default Mock File Tree Structure and Architecture
   const mockData = {
-    fileTree: {
+    repoTree: {
       name: "my-app",
       type: "folder",
       children: [
@@ -68,81 +67,94 @@ function LoadingStateContent() {
   };
 
   useEffect(() => {
-    if (apiFetched.current) return;
-    apiFetched.current = true;
+    if (connectionOpened.current) return;
+    connectionOpened.current = true;
 
-    setLogs(["Analyzing Repository Structure..."]);
-
-    const fetchAnalysis = async () => {
-      // Simulate reading logs step-by-step
+    if (isMock) {
+      // --- Simulated Fallback Mode for Mock Session ---
+      setLogs(["Analyzing Mock Structure..."]);
+      
       setTimeout(() => {
         setLogs(prev => [...prev, "• Reading file tree..."]);
-      }, 1000);
+      }, 800);
 
       setTimeout(() => {
         setLogs(prev => [...prev, "• Parsing code dependencies..."]);
-      }, 2500);
+      }, 1800);
 
       setTimeout(() => {
         setLogs(prev => [...prev, "• Mapping architecture nodes..."]);
-      }, 4000);
+      }, 2800);
 
-      if (isMock) {
-        // Mock scenario (no backend API call)
-        dataRef.current = mockData;
-      } else {
-        // Real Backend analysis
+      // Progress bar simulation loop
+      let simulatedProgress = 0;
+      const interval = setInterval(() => {
+        simulatedProgress += 5;
+        if (simulatedProgress >= 100) {
+          clearInterval(interval);
+          setProgress(100);
+          setLogs(prev => [...prev, "✓ Complete! Launching dashboard..."]);
+          setTimeout(() => {
+            sessionStorage.setItem('codemap_tree', JSON.stringify(mockData));
+            router.push(`/dashboard?folderId=${folderId}`);
+          }, 800);
+        } else {
+          setProgress(simulatedProgress);
+        }
+      }, 150);
+
+      return () => clearInterval(interval);
+
+    } else {
+      // --- Real-time SSE Connection Mode ---
+      setLogs(["Establishing Event Connection..."]);
+      setProgress(0);
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const eventSource = new EventSource(`${backendUrl}/analyze-stream?folderId=${folderId}`);
+
+      eventSource.onopen = () => {
+        setLogs(prev => [...prev, "🔌 Connected to analyzer. Scanning repository..."]);
+      };
+
+      eventSource.onmessage = (event) => {
         try {
-          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-          const response = await fetch(`${backendUrl}/analyze`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ folderId }),
-          });
+          const parsed = JSON.parse(event.data);
+          
+          if (parsed.status === 'error') {
+            setLogs(prev => [...prev, `❌ ${parsed.log}`]);
+            eventSource.close();
+            return;
+          }
 
-          const data = await response.json();
-          if (response.ok) {
-            dataRef.current = data;
-          } else {
-            console.warn('Backend analyze endpoint failed. Falling back to mock data.', data.error);
-            dataRef.current = mockData;
+          setProgress(parsed.progress);
+          if (parsed.log) {
+            setLogs(prev => [...prev, parsed.log]);
+          }
+
+          if (parsed.status === 'complete' && parsed.data) {
+            eventSource.close();
+            setTimeout(() => {
+              sessionStorage.setItem('codemap_tree', JSON.stringify(parsed.data));
+              router.push(`/dashboard?folderId=${folderId}`);
+            }, 800);
           }
         } catch (err) {
-          console.warn('Could not connect to backend server. Using mock data.', err);
-          dataRef.current = mockData;
+          console.error('Error parsing SSE event:', err);
         }
-      }
-    };
+      };
 
-    fetchAnalysis();
-  }, [folderId, isMock]);
+      eventSource.onerror = (err) => {
+        console.error('EventSource connection failed:', err);
+        setLogs(prev => [...prev, '⚠️ Event connection interrupted. Please ensure the backend is running.']);
+        eventSource.close();
+      };
 
-  // Handle progress animation and redirection
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          // Complete and redirect
-          setLogs(prevLogs => [...prevLogs, "✓ Complete! Launching dashboard..."]);
-          setTimeout(() => {
-            // Save analysis result to sessionStorage so Dashboard can read it
-            sessionStorage.setItem('codemap_tree', JSON.stringify(dataRef.current || mockData));
-            router.push('/dashboard');
-          }, 800);
-          return 100;
-        }
-        
-        // Slower increment as it nears 100%
-        const increment = prev >= 95 ? 1 : prev >= 85 ? 2 : 4;
-        return prev + increment;
-      });
-    }, 200);
-
-    return () => clearInterval(interval);
-  }, [router]);
+      return () => {
+        eventSource.close();
+      };
+    }
+  }, [folderId, isMock, router]);
 
   // Circular calculations
   const radius = 50;

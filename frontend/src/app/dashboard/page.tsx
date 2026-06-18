@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Folder, 
   FolderOpen, 
@@ -41,7 +42,12 @@ interface Edge {
   relationship: string;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const folderId = searchParams.get('folderId');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [treeData, setTreeData] = useState<FileNode | null>(null);
   const [architectureData, setArchitectureData] = useState<{ nodes: Node[]; edges: Edge[] } | null>(null);
   const [activeFile, setActiveFile] = useState<string>('App.js');
@@ -52,50 +58,76 @@ export default function DashboardPage() {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
-  // Retrieve cached repository tree and architecture from loading stage
+  // Retrieve cached repository tree and architecture from loading stage or database
   useEffect(() => {
-    const cached = sessionStorage.getItem('codemap_tree');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        
-        // Handle integrated { repoTree, architecture } format or legacy format
-        if (parsed.repoTree) {
-          setTreeData(parsed.repoTree);
-          if (parsed.architecture) {
-            setArchitectureData(parsed.architecture);
+    const loadFromCache = () => {
+      const cached = sessionStorage.getItem('codemap_tree');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          
+          // Handle integrated { repoTree, architecture } format or legacy format
+          if (parsed.repoTree) {
+            setTreeData(parsed.repoTree);
+            if (parsed.architecture) {
+              setArchitectureData(parsed.architecture);
+            }
+          } else {
+            setTreeData(parsed);
+            // Fallback to programmatic mock architecture generation
+            setArchitectureData(generateMockArchitecture(parsed));
           }
-        } else {
-          setTreeData(parsed);
-          // Fallback to programmatic mock architecture generation
-          setArchitectureData(generateMockArchitecture(parsed));
+        } catch (e) {
+          console.error('Error parsing cached repository tree', e);
         }
-      } catch (e) {
-        console.error('Error parsing cached repository tree', e);
+      } else {
+        // Default mock structure
+        const defaultTree: FileNode = {
+          name: "my-app",
+          type: "folder",
+          children: [
+            { name: "index.js", type: "file" },
+            { name: "utils.js", type: "file" },
+            {
+              name: "components",
+              type: "folder",
+              children: [
+                { name: "Dashboard.js", type: "file" },
+                { name: "Sidebar.js", type: "file" }
+              ]
+            },
+            { name: "package.json", type: "file" }
+          ]
+        };
+        setTreeData(defaultTree);
+        setArchitectureData(generateMockArchitecture(defaultTree));
       }
+    };
+
+    if (folderId && !folderId.startsWith('git-') && folderId !== 'mock-app') {
+      setLoading(true);
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+
+      fetch(`${backendUrl}/architecture/${folderId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Data not found in DB');
+          return res.json();
+        })
+        .then((data) => {
+          setTreeData(data.repoTree);
+          setArchitectureData(data.architecture);
+        })
+        .catch((err) => {
+          console.warn('⚠️ Fetching from DB failed, falling back to cache:', err.message);
+          loadFromCache();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
-      // Default mock structure
-      const defaultTree: FileNode = {
-        name: "my-app",
-        type: "folder",
-        children: [
-          { name: "index.js", type: "file" },
-          { name: "utils.js", type: "file" },
-          {
-            name: "components",
-            type: "folder",
-            children: [
-              { name: "Dashboard.js", type: "file" },
-              { name: "Sidebar.js", type: "file" }
-            ]
-          },
-          { name: "package.json", type: "file" }
-        ]
-      };
-      setTreeData(defaultTree);
-      setArchitectureData(generateMockArchitecture(defaultTree));
+      loadFromCache();
     }
-  }, []);
+  }, [folderId]);
 
   // Programmatic generation of mock architecture nodes and edges from a file tree
   const generateMockArchitecture = (tree: FileNode): { nodes: Node[]; edges: Edge[] } => {
@@ -111,7 +143,9 @@ export default function DashboardPage() {
     };
 
     const traverse = (node: FileNode, parentPath = '') => {
+      if (!node || typeof node !== 'object') return;
       const name = node.name;
+      if (!name) return;
       const isFolder = node.type === 'folder';
       const path = parentPath ? `${parentPath}/${name}` : name;
       const id = path.replace(/[^a-zA-Z0-9]/g, '_');
@@ -443,6 +477,15 @@ export default function DashboardPage() {
     return false;
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-[#060913] flex flex-col items-center justify-center font-mono text-sm text-slate-400">
+        <RefreshCw className="h-6 w-6 animate-spin text-white mb-4" />
+        Loading analysis from database...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[#060913] text-slate-100">
       <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-[288px_minmax(0,1fr)]">
@@ -690,5 +733,17 @@ export default function DashboardPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#060913] flex items-center justify-center font-mono text-sm text-slate-400">
+        Loading Workspace...
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
