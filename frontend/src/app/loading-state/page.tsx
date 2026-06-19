@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoadingStateContent() {
@@ -11,7 +11,6 @@ function LoadingStateContent() {
 
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
-  const connectionOpened = useRef(false);
 
   // Default Mock File Tree Structure and Architecture
   const mockData = {
@@ -93,24 +92,24 @@ function LoadingStateContent() {
   };
 
   useEffect(() => {
-    if (connectionOpened.current) return;
-    connectionOpened.current = true;
+    const timeouts: NodeJS.Timeout[] = [];
 
     if (isMock) {
-      // --- Simulated Fallback Mode for Mock Session ---
-      setLogs(["Analyzing Mock Structure..."]);
+      timeouts.push(setTimeout(() => {
+        setLogs(["Analyzing Mock Structure..."]);
+      }, 0));
       
-      setTimeout(() => {
+      timeouts.push(setTimeout(() => {
         setLogs(prev => [...prev, "• Reading file tree..."]);
-      }, 800);
+      }, 800));
 
-      setTimeout(() => {
+      timeouts.push(setTimeout(() => {
         setLogs(prev => [...prev, "• Parsing code dependencies..."]);
-      }, 1800);
+      }, 1800));
 
-      setTimeout(() => {
+      timeouts.push(setTimeout(() => {
         setLogs(prev => [...prev, "• Mapping architecture nodes..."]);
-      }, 2800);
+      }, 2800));
 
       // Progress bar simulation loop
       let simulatedProgress = 0;
@@ -120,21 +119,24 @@ function LoadingStateContent() {
           clearInterval(interval);
           setProgress(100);
           setLogs(prev => [...prev, "✓ Complete! Launching dashboard..."]);
-          setTimeout(() => {
+          timeouts.push(setTimeout(() => {
             sessionStorage.setItem('codemap_tree', JSON.stringify(mockData));
             router.push(`/dashboard?folderId=${folderId}`);
-          }, 800);
+          }, 800));
         } else {
           setProgress(simulatedProgress);
         }
       }, 150);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        timeouts.forEach(t => clearTimeout(t));
+      };
 
     } else {
-      // --- Real-time SSE Connection Mode ---
-      setLogs(["Establishing Event Connection..."]);
-      setProgress(0);
+      timeouts.push(setTimeout(() => {
+        setLogs(["Establishing Event Connection..."]);
+      }, 0));
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
       const eventSource = new EventSource(`${backendUrl}/analyze-stream?folderId=${folderId}`);
@@ -160,10 +162,10 @@ function LoadingStateContent() {
 
           if (parsed.status === 'complete' && parsed.data) {
             eventSource.close();
-            setTimeout(() => {
+            timeouts.push(setTimeout(() => {
               sessionStorage.setItem('codemap_tree', JSON.stringify(parsed.data));
               router.push(`/dashboard?folderId=${folderId}`);
-            }, 800);
+            }, 800));
           }
         } catch (err) {
           console.error('Error parsing SSE event:', err);
@@ -178,6 +180,7 @@ function LoadingStateContent() {
 
       return () => {
         eventSource.close();
+        timeouts.forEach(t => clearTimeout(t));
       };
     }
   }, [folderId, isMock, router]);

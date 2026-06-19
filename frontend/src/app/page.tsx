@@ -25,14 +25,29 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Action Button: Get Started */}
-        <div className="pt-4">
+        {/* Action Buttons */}
+        <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link 
             href="/upload" 
             className="inline-flex items-center justify-center px-8 py-4 text-base font-bold font-mono tracking-wide text-black bg-white border-2 border-white rounded shadow-[4px_4px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_rgba(255,255,255,0.3)] hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-zinc-200 transition-all duration-200"
           >
             Get Started
           </Link>
+          <Link 
+            href="/loading-state?folderId=mock-app" 
+            className="inline-flex items-center justify-center px-8 py-4 text-base font-bold font-mono tracking-wide text-white bg-zinc-900 border-2 border-zinc-800 rounded hover:bg-zinc-850 hover:border-zinc-700 transition-all duration-200"
+          >
+            Try Demo Mode
+          </Link>
+        </div>
+        <div className="pt-2">
+          <a 
+            href="/demo-project.zip" 
+            download
+            className="text-xs font-mono text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
+          >
+            Download Demo Codebase ZIP
+          </a>
         </div>
       </div>
 

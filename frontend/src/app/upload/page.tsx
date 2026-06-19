@@ -107,9 +107,10 @@ export default function UploadPage() {
         const mockFolderId = `git-${repoUrl.replace(/[^a-zA-Z0-9]/g, '-')}`;
         router.push(`/loading-state?folderId=${mockFolderId}&url=${encodeURIComponent(repoUrl)}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Upload error:', err);
-      setError(err.message || 'An error occurred while connecting to the backend server. Make sure the backend server is running on http://localhost:5000.');
+      const errMsg = err instanceof Error ? err.message : 'An error occurred while connecting to the backend server. Make sure the backend server is running on http://localhost:5000.';
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -209,6 +210,24 @@ export default function UploadPage() {
           >
             {loading ? 'Processing...' : 'Generate CodeMap'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => router.push('/loading-state?folderId=mock-app')}
+            className="w-full py-3.5 border border-zinc-800 bg-zinc-950/45 hover:bg-zinc-900/60 text-zinc-300 font-bold font-mono tracking-wide rounded transition-all duration-200 mt-2"
+          >
+            Or Try Demo Mode (Offline)
+          </button>
+
+          <div className="text-center pt-2">
+            <a 
+              href="/demo-project.zip" 
+              download
+              className="text-xs font-mono text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
+            >
+              Download Demo Codebase ZIP
+            </a>
+          </div>
         </form>
       </div>
     </div>
