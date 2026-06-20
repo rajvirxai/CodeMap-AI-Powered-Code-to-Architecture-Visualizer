@@ -6,6 +6,9 @@
  * and starts the HTTP server listening on a defined port.
  */
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const repoRoutes = require('./routes/repoRoutes');
