@@ -48,7 +48,7 @@ const uploadRepo = (req, res) => {
     }
 
     // Generate a unique folder name using the current timestamp and clean original filename
-    const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '');
+    const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 15);
     const folderId = `${Date.now()}-${cleanName}`;
     
     // Resolve paths
@@ -181,7 +181,7 @@ const cloneRepo = async (req, res) => {
       // Use fallback name
     }
 
-    const cleanName = repoName.replace(/[^a-zA-Z0-9-_]/g, '');
+    const cleanName = repoName.replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 15);
     const folderId = `clone-${Date.now()}-${cleanName}`;
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
