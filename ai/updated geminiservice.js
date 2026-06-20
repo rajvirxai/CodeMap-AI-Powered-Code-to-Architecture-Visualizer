@@ -1,13 +1,10 @@
-import { GoogleGenAI, Type } from '@google/genai';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const { GoogleGenAI, Type } = require('@google/genai');
+const dotenv = require('dotenv');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
 if (!process.env.GEMINI_API_KEY) {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
   dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 }
 
@@ -24,34 +21,21 @@ const ai = new GoogleGenAI({ apiKey });
 const MODEL_NAME = 'gemini-2.5-flash';
 
 /**
- * Basic Hello World test function
- */
-async function testGemini() {
-  try {
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: "Say Hello",
-    });
-    console.log('Gemini Response:', response.text);
-  } catch (error) {
-    console.error('Error generating content:', error.message);
-  }
-}
-
-/**
  * Validates and normalizes the architectural nodes and edges.
  * @param {Object} output - The raw JSON output from the LLM or fallback.
  * @returns {Object} Cleaned and validated architecture object.
  */
 function validateArchitecture(output) {
   if (!output || typeof output !== 'object') {
-    return { summary: "No summary provided.", nodes: [], edges: [] };
+    return { summary: "", nodes: [], edges: [] };
   }
 
-  const summary = typeof output.summary === 'string' ? output.summary : "No summary provided.";
   const nodes = Array.isArray(output.nodes) ? output.nodes : [];
   const edges = Array.isArray(output.edges) ? output.edges : [];
-
+  const summary = 
+    typeof output.summary === 'string'
+    ? output.summary.trim()
+    : '';
   const validTypes = new Set(['frontend', 'backend', 'database', 'api', 'service', 'utility', 'config', 'auth', 'storage', 'other']);
 
   const cleanedNodes = [];
@@ -85,8 +69,6 @@ function validateArchitecture(output) {
 
     if (seenNodeIds.has(source) && seenNodeIds.has(target)) {
       cleanedEdges.push({ source, target, relationship });
-    } else {
-      console.warn(`Validation warning: Filtering out edge referencing missing node(s): ${source} -> ${target}`);
     }
   }
 
@@ -227,10 +209,10 @@ function generateFallbackResponse(repoStructure) {
   }
 
   return {
-    summary: "Fallback architecture map. Constructed programmatically because the AI service was unavailable.",
-    nodes,
-    edges
-  };
+  summary: "Architecture generated using fallback parser.",
+  nodes,
+  edges
+};
 }
 
 /**
@@ -295,7 +277,6 @@ IMPORTANT RULES:
    - Architectural layers
    - Key responsibilities
 15. The summary must be concise and under 100 words.
-
 ANALYSIS APPROACH:
 - Identify the major layers of the application.
 - Detect relationships such as:
@@ -366,35 +347,10 @@ OUTPUT QUALITY REQUIREMENTS:
   }
 }
 
-// Automatically run the test if run directly
-const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
-if (isDirectRun) {
-  (async () => {
-    console.log('--- Testing basic Hello ---');
-    await testGemini();
-
-    console.log('\n--- Testing analyzeRepository ---');
-    const exampleInput = {
-      "src": {
-        "components": [
-          "Navbar.jsx",
-          "Sidebar.jsx"
-        ],
-        "pages": [
-          "Dashboard.jsx"
-        ]
-      }
-    };
-
-    try {
-      const analysis = await analyzeRepository(exampleInput);
-      console.log(JSON.stringify(analysis, null, 2));
-    } catch (error) {
-      console.error('Analysis test failed:', error);
-    }
-  })();
-}
-
-export { ai, MODEL_NAME, testGemini, analyzeRepository, generateFallbackResponse, validateArchitecture };
-
-
+module.exports = {
+  ai,
+  MODEL_NAME,
+  analyzeRepository,
+  generateFallbackResponse,
+  validateArchitecture
+};

@@ -1,189 +1,148 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+// Default Mock File Tree Structure and Architecture
+const mockData = {
+  fileTree: {
+    name: "my-app",
+    type: "folder",
+    children: [
+      {
+        name: "index.js",
+        type: "file",
+      },
+      {
+        name: "utils.js",
+        type: "file",
+      },
+      {
+        name: "components",
+        type: "folder",
+        children: [
+          {
+            name: "Dashboard.js",
+            type: "file",
+          },
+          {
+            name: "Sidebar.js",
+            type: "file",
+          }
+        ]
+      },
+      {
+        name: "package.json",
+        type: "file"
+      }
+    ]
+  },
+  architecture: {
+    entryPoint: "index.js",
+    modules: [
+      {
+        name: "Components",
+        type: "Component",
+        description: "Core UI layout and panel display components",
+        children: ["Dashboard.js", "Sidebar.js"]
+      },
+      {
+        name: "Utils",
+        type: "Utility",
+        description: "Helper files and calculations",
+        children: ["utils.js"]
+      }
+    ]
+  }
+};
 
 function LoadingStateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const folderId = searchParams.get('folderId') || 'mock-app';
-  const isMock = folderId.startsWith('git-') || folderId === 'mock-app';
+  const isMock = folderId.startsWith('mock-') || folderId === 'mock-app';
 
-  const [progress, setProgress] = useState(0);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [progress, setProgress] = useState(10);
+  const [logs, setLogs] = useState<string[]>(['Initializing analyzer...']);
+  const [analysisData, setAnalysisData] = useState<unknown | null>(null);
+  const apiFetched = useRef(false);
 
-  // Default Mock File Tree Structure and Architecture
-  const mockData = {
-    repoTree: {
-      name: "ecommerce-app",
-      type: "folder",
-      children: [
-        {
-          name: "components",
-          type: "folder",
-          children: [
-            { name: "ProductCard.tsx", type: "file" },
-            { name: "Cart.tsx", type: "file" },
-            { name: "Navbar.tsx", type: "file" }
-          ]
-        },
-        {
-          name: "controllers",
-          type: "folder",
-          children: [
-            { name: "authController.js", type: "file" },
-            { name: "productController.js", type: "file" },
-            { name: "orderController.js", type: "file" }
-          ]
-        },
-        {
-          name: "routes",
-          type: "folder",
-          children: [
-            { name: "authRoutes.js", type: "file" },
-            { name: "orderRoutes.js", type: "file" }
-          ]
-        },
-        {
-          name: "models",
-          type: "folder",
-          children: [
-            { name: "User.js", type: "file" },
-            { name: "Product.js", type: "file" },
-            { name: "Order.js", type: "file" }
-          ]
-        },
-        {
-          name: "services",
-          type: "folder",
-          children: [
-            { name: "paymentService.js", type: "file" },
-            { name: "emailService.js", type: "file" }
-          ]
-        },
-        {
-          name: "utils",
-          type: "folder",
-          children: [
-            { name: "db.js", type: "file" }
-          ]
-        },
-        { name: "package.json", type: "file" }
-      ]
-    },
-    architecture: {
-      summary: "An enterprise-grade e-commerce application. The Next.js frontend handles product catalog rendering, inventory displays, cart logic, and authentication checks. It invokes REST endpoints handled by Express routing, which queries a MongoDB database using Mongoose schemas for orders/products, and integrates with the Stripe SDK for payments.",
-      nodes: [
-        { id: "ecommerce_app_components", label: "Next.js Web Client", type: "frontend" },
-        { id: "ecommerce_app_routes", label: "Express REST Gateway", type: "api" },
-        { id: "ecommerce_app_controllers", label: "Controllers Layer", type: "backend" },
-        { id: "ecommerce_app_services", label: "Stripe Payment Service", type: "service" },
-        { id: "ecommerce_app_models", label: "MongoDB Database Models", type: "database" },
-        { id: "ecommerce_app_utils_db_js", label: "Database Connection", type: "database" }
-      ],
-      edges: [
-        { source: "ecommerce_app_components", target: "ecommerce_app_routes", relationship: "REST Calls" },
-        { source: "ecommerce_app_routes", target: "ecommerce_app_controllers", relationship: "Routes to" },
-        { source: "ecommerce_app_controllers", target: "ecommerce_app_services", relationship: "Delegates to" },
-        { source: "ecommerce_app_controllers", target: "ecommerce_app_models", relationship: "Queries" },
-        { source: "ecommerce_app_models", target: "ecommerce_app_utils_db_js", relationship: "Uses Connection" }
-      ]
-    }
-  };
+  const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
   useEffect(() => {
-    const timeouts: NodeJS.Timeout[] = [];
+    if (apiFetched.current) return;
+    apiFetched.current = true;
 
-    if (isMock) {
-      timeouts.push(setTimeout(() => {
-        setLogs(["Analyzing Mock Structure..."]);
-      }, 0));
-      
-      timeouts.push(setTimeout(() => {
-        setLogs(prev => [...prev, "• Reading file tree..."]);
-      }, 800));
+    const addLog = (message: string) => {
+      setLogs((prev) => [...prev, message]);
+    };
 
-      timeouts.push(setTimeout(() => {
-        setLogs(prev => [...prev, "• Parsing code dependencies..."]);
-      }, 1800));
+    const fetchAnalysis = async () => {
+      addLog('Analyzing repository structure...');
 
-      timeouts.push(setTimeout(() => {
-        setLogs(prev => [...prev, "• Mapping architecture nodes..."]);
-      }, 2800));
+      if (isMock) {
+        await delay(160);
+        addLog('Using mock repository data');
+        setAnalysisData(mockData);
+        return;
+      }
 
-      // Progress bar simulation loop
-      let simulatedProgress = 0;
-      const interval = setInterval(() => {
-        simulatedProgress += 5;
-        if (simulatedProgress >= 100) {
-          clearInterval(interval);
-          setProgress(100);
-          setLogs(prev => [...prev, "✓ Complete! Launching dashboard..."]);
-          timeouts.push(setTimeout(() => {
-            sessionStorage.setItem('codemap_tree', JSON.stringify(mockData));
-            router.push(`/dashboard?folderId=${folderId}`);
-          }, 800));
-        } else {
-          setProgress(simulatedProgress);
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+        const response = await fetch(`${backendUrl}/analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ folderId }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to analyze repository');
         }
-      }, 150);
 
-      return () => {
-        clearInterval(interval);
-        timeouts.forEach(t => clearTimeout(t));
-      };
+        addLog('Repository analysis complete');
+        setAnalysisData(data);
+      } catch (err: unknown) {
+        console.warn('Could not connect to backend server. Using mock data.', err);
+        addLog('Backend unavailable. Using mock data.');
+        setAnalysisData(mockData);
+      }
+    };
 
-    } else {
-      timeouts.push(setTimeout(() => {
-        setLogs(["Establishing Event Connection..."]);
-      }, 0));
+    fetchAnalysis();
+  }, [folderId, isMock]);
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-      const eventSource = new EventSource(`${backendUrl}/analyze-stream?folderId=${folderId}`);
+  useEffect(() => {
+    if (analysisData === null) return;
 
-      eventSource.onopen = () => {
-        setLogs(prev => [...prev, "🔌 Connected to analyzer. Scanning repository..."]);
-      };
+    const progressTimeout = window.setTimeout(() => {
+      setProgress(92);
+    }, 0);
 
-      eventSource.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          
-          if (parsed.status === 'error') {
-            setLogs(prev => [...prev, `❌ ${parsed.log}`]);
-            eventSource.close();
-            return;
-          }
+    const redirectTimeout = window.setTimeout(() => {
+      setProgress(100);
+      setLogs((prevLogs) => [...prevLogs, '✓ Complete! Launching dashboard...']);
+      sessionStorage.setItem('codemap_tree', JSON.stringify(analysisData));
+      router.push('/dashboard');
+    }, 260);
 
-          setProgress(parsed.progress);
-          if (parsed.log) {
-            setLogs(prev => [...prev, parsed.log]);
-          }
+    return () => {
+      window.clearTimeout(progressTimeout);
+      window.clearTimeout(redirectTimeout);
+    };
+  }, [analysisData, router]);
 
-          if (parsed.status === 'complete' && parsed.data) {
-            eventSource.close();
-            timeouts.push(setTimeout(() => {
-              sessionStorage.setItem('codemap_tree', JSON.stringify(parsed.data));
-              router.push(`/dashboard?folderId=${folderId}`);
-            }, 800));
-          }
-        } catch (err) {
-          console.error('Error parsing SSE event:', err);
-        }
-      };
+  useEffect(() => {
+    if (progress >= 90) return;
 
-      eventSource.onerror = (err) => {
-        console.error('EventSource connection failed:', err);
-        setLogs(prev => [...prev, '⚠️ Event connection interrupted. Please ensure the backend is running.']);
-        eventSource.close();
-      };
+    const interval = window.setInterval(() => {
+      setProgress((prev) => Math.min(prev + 7, 90));
+    }, 100);
 
-      return () => {
-        eventSource.close();
-        timeouts.forEach(t => clearTimeout(t));
-      };
-    }
-  }, [folderId, isMock, router]);
+    return () => window.clearInterval(interval);
+  }, [progress]);
 
   // Circular calculations
   const radius = 50;
@@ -240,7 +199,7 @@ function LoadingStateContent() {
         </div>
 
         {/* Status Terminal Logs */}
-        <div className="w-full p-5 bg-black border border-zinc-850 rounded-xl font-mono text-xs text-zinc-400 space-y-2 text-left min-h-[160px] shadow-inner select-none">
+        <div className="w-full p-5 bg-black border border-zinc-850 rounded-xl font-mono text-xs text-zinc-400 space-y-2 text-left min-h-40 shadow-inner select-none">
           {logs.map((log, index) => {
             const isBullet = log.startsWith('•');
             const isSuccess = log.startsWith('✓');
