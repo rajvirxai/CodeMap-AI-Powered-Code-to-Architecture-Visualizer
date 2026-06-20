@@ -1,12 +1,4 @@
 const { GoogleGenAI, Type } = require('@google/genai');
-const dotenv = require('dotenv');
-const path = require('path');
-
-// Load environment variables
-dotenv.config();
-if (!process.env.GEMINI_API_KEY) {
-  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-}
 
 const apiKey = process.env.GEMINI_API_KEY;
 
