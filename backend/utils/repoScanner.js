@@ -26,12 +26,94 @@ function scanDirectory(currentPath, name, relativePath = '') {
 
     // If the path points to a file, we return a simple file node
     if (!stats.isDirectory()) {
-      return {
+      const ext = path.extname(name);
+      const fileNode = {
         name: name,
         type: 'file',
-        fileType: path.extname(name) || 'unknown',
+        fileType: ext || 'unknown',
         path: currentRelativePath
       };
+
+      // Extract metadata only for JS/TS code files
+      const codeExtensions = ['.js', '.jsx', '.ts', '.tsx'];
+      if (codeExtensions.includes(ext.toLowerCase())) {
+        try {
+          // Read the file content as a string
+          const content = fs.readFileSync(currentPath, 'utf8');
+
+          // Initialize metadata arrays using Sets to avoid duplicates
+          const imports = new Set();
+          const exports = new Set();
+          const dependencies = new Set();
+
+          // 1. Regex to find imports from 'require("module")'
+          const requireRegex = /require\(['"]([^'"]+)['"]\)/g;
+          let match;
+          while ((match = requireRegex.exec(content)) !== null) {
+            const moduleName = match[1];
+            imports.add(moduleName);
+            // Dependencies are local file imports (starting with '.')
+            if (moduleName.startsWith('.')) {
+              dependencies.add(moduleName);
+            }
+          }
+
+          // 2. Regex to find imports from 'import ... from "module"' or 'import "module"'
+          const importRegex = /import\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g;
+          while ((match = importRegex.exec(content)) !== null) {
+            const moduleName = match[1];
+            imports.add(moduleName);
+            // Dependencies are local file imports (starting with '.')
+            if (moduleName.startsWith('.')) {
+              dependencies.add(moduleName);
+            }
+          }
+
+          // 3. Regex to find named exports (e.g., export const myFunc = ...)
+          const exportRegex = /export\s+(?:default\s+)?(?:const|let|var|function|class)\s+([a-zA-Z0-9_$]+)/g;
+          while ((match = exportRegex.exec(content)) !== null) {
+            exports.add(match[1]);
+          }
+
+          // 4. Regex to find export blocks (e.g., export { a, b })
+          const exportListRegex = /export\s+{([^}]+)}/g;
+          while ((match = exportListRegex.exec(content)) !== null) {
+            const items = match[1].split(',').map(i => i.trim().split(/\s+/)[0]);
+            items.forEach(i => { if (i) exports.add(i); });
+          }
+
+          // 5. Regex to find module.exports (e.g., module.exports = { a, b } or module.exports = myFunc)
+          const moduleExportsRegex = /module\.exports\s*=\s*(?:{([^}]+)}|([a-zA-Z0-9_$]+))/g;
+          while ((match = moduleExportsRegex.exec(content)) !== null) {
+            if (match[1]) {
+              // Extract from object
+              const items = match[1].split(',').map(i => i.trim().split(/\s+/)[0]);
+              items.forEach(i => { if (i) exports.add(i); });
+            } else if (match[2]) {
+              // Extract single assignment
+              exports.add(match[2]);
+            }
+          }
+
+          // 6. Regex to find individual property exports (e.g., exports.myFunc = ...)
+          const simpleExportRegex = /exports\.([a-zA-Z0-9_$]+)\s*=/g;
+          while ((match = simpleExportRegex.exec(content)) !== null) {
+            exports.add(match[1]);
+          }
+
+          // Attach the extracted metadata to the file node
+          fileNode.imports = Array.from(imports);
+          fileNode.exports = Array.from(exports);
+          fileNode.dependencies = Array.from(dependencies);
+
+        } catch (error) {
+          // If a file can't be read/parsed, we skip metadata extraction 
+          // and return the basic file info without crashing the scan.
+          console.warn(`Could not extract metadata for ${currentPath}:`, error.message);
+        }
+      }
+
+      return fileNode;
     }
 
     // If it's a directory, we need to scan its children
