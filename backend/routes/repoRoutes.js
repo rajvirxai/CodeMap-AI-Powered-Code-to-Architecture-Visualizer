@@ -12,7 +12,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { getHealth, uploadRepo, analyzeRepo } = require('../controllers/repoController');
+const { getHealth, uploadRepo, analyzeRepo, cloneRepo } = require('../controllers/repoController');
 
 // Define where multer will save uploaded files (uploads/ directory in root)
 const uploadDir = path.join(__dirname, '../uploads');
@@ -71,5 +71,12 @@ router.post('/upload', upload.single('file'), uploadRepo);
  * Path: /analyze
  */
 router.post('/analyze', analyzeRepo);
+
+/**
+ * Endpoint 4: Clone repository
+ * Method: POST
+ * Path: /clone
+ */
+router.post('/clone', cloneRepo);
 
 module.exports = router;

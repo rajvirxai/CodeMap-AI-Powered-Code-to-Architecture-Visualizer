@@ -38,23 +38,29 @@ app.use('/', repoRoutes);
  * Captures any unhandled errors in route handlers or middleware (e.g., Multer file type rejection).
  */
 app.use((err, req, res, next) => {
-  console.error('Unhandled Server Error:', err.message);
-  
-  // Custom check if error was thrown by Multer
-  if (err.code === 'LIMIT_UNEXPECTED_FILE' || err.message.includes('Only ZIP files')) {
-    return res.status(400).json({ error: err.message });
+  const status = err.status || ((err.code === 'LIMIT_UNEXPECTED_FILE' || err.message.includes('Only ZIP files')) ? 400 : 500);
+
+  if (status >= 500) {
+    console.error('Unhandled Server Error:', err.message);
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      message: err.message
+    });
   }
 
-  return res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message
-  });
+  console.warn('Handled client error:', err.message);
+  return res.status(status).json({ error: err.message });
 });
 
-// Start listening for incoming HTTP requests on the specified port
-app.listen(PORT, () => {
-  console.log(`========================================================`);
-  console.log(`🚀 Server is successfully running on http://localhost:${PORT}`);
-  console.log(`📌 Health check: GET http://localhost:${PORT}/health`);
-  console.log(`========================================================`);
-});
+// Start listening for incoming HTTP requests on the specified port if run directly
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`========================================================`);
+    console.log(`🚀 Server is successfully running on http://localhost:${PORT}`);
+    console.log(`📌 Health check: GET http://localhost:${PORT}/health`);
+    console.log(`========================================================`);
+  });
+}
+
+module.exports = app;
+

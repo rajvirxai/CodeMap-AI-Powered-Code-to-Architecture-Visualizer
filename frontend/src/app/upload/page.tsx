@@ -102,14 +102,29 @@ export default function UploadPage() {
         router.push(`/loading-state?folderId=${data.folderId}`);
       } else {
         // --- 2. GitHub URL Path ---
-        // For a repository URL, we'll parse it and pass a mock folderId or handle it
-        // Since the current backend expects /upload for ZIPs, we can pass a special URL parameter
-        const mockFolderId = `git-${repoUrl.replace(/[^a-zA-Z0-9]/g, '-')}`;
-        router.push(`/loading-state?folderId=${mockFolderId}&url=${encodeURIComponent(repoUrl)}`);
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+        
+        const response = await fetch(`${backendUrl}/clone`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ repoUrl }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to clone repository');
+        }
+
+        // Navigate to the loading state page with the real folderId
+        router.push(`/loading-state?folderId=${data.folderId}`);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Upload error:', err);
-      setError(err.message || 'An error occurred while connecting to the backend server. Make sure the backend server is running on http://localhost:5000.');
+      const errMsg = err instanceof Error ? err.message : 'An error occurred while connecting to the backend server. Make sure the backend server is running on http://localhost:5000.';
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -151,7 +166,7 @@ export default function UploadPage() {
             <button
               type="button"
               onClick={onBrowseClick}
-              className="px-4 py-2 border border-zinc-700 bg-zinc-850 hover:bg-zinc-800 hover:border-zinc-600 rounded text-xs font-mono font-bold tracking-wide transition-all"
+              className="px-4 py-2 border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 rounded text-xs font-mono font-bold tracking-wide transition-all"
             >
               Browse File
             </button>
@@ -167,9 +182,9 @@ export default function UploadPage() {
 
           {/* Element B: Divider */}
           <div className="flex items-center justify-center gap-4 py-2">
-            <div className="h-[1px] flex-1 bg-zinc-800" />
+            <div className="h-px flex-1 bg-zinc-800" />
             <span className="text-xs font-mono font-bold text-zinc-500 tracking-wider">—OR—</span>
-            <div className="h-[1px] flex-1 bg-zinc-800" />
+            <div className="h-px flex-1 bg-zinc-800" />
           </div>
 
           {/* Element C: Input URL */}
@@ -205,10 +220,28 @@ export default function UploadPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 border-2 border-white bg-white hover:bg-zinc-200 text-black font-bold font-mono tracking-wide rounded shadow-[4px_4px_0px_rgba(255,255,255,0.2)] hover:shadow-[2px_2px_0px_rgba(255,255,255,0.2)] hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 transition-all duration-200"
+            className="w-full py-3.5 border-2 border-white bg-white hover:bg-zinc-200 text-black font-bold font-mono tracking-wide rounded shadow-[4px_4px_0px_rgba(255,255,255,0.2)] hover:shadow-[2px_2px_0px_rgba(255,255,255,0.2)] hover:translate-x-0.5 hover:translate-y-0.5 disabled:opacity-50 transition-all duration-200"
           >
             {loading ? 'Processing...' : 'Generate CodeMap'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => router.push('/loading-state?folderId=mock-app')}
+            className="w-full py-3.5 border border-zinc-800 bg-zinc-950/45 hover:bg-zinc-900/60 text-zinc-300 font-bold font-mono tracking-wide rounded transition-all duration-200 mt-2"
+          >
+            Or Try Demo Mode (Offline)
+          </button>
+
+          <div className="text-center pt-2">
+            <a 
+              href="/demo-project.zip" 
+              download
+              className="text-xs font-mono text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
+            >
+              Download Demo Codebase ZIP
+            </a>
+          </div>
         </form>
       </div>
     </div>

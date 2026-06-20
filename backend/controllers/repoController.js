@@ -6,13 +6,18 @@
  * 1. Health check (GET /health)
  * 2. Uploading a ZIP (POST /upload)
  * 3. Scanning and analyzing the extracted folder (POST /analyze)
+ * 4. Cloning a repository from a Git URL (POST /clone)
  */
 
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 const { scanDirectory } = require('../utils/repoScanner');
-const { analyzeRepository } = require('../services/llmService');
+const { analyzeArchitecture } = require('../utils/geminiAnalyzer');
+const { mongoose, Analysis } = require('../utils/db');
 
 /**
  * 1. Health Check Endpoint
@@ -43,7 +48,7 @@ const uploadRepo = (req, res) => {
     }
 
     // Generate a unique folder name using the current timestamp and clean original filename
-    const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '');
+    const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 15);
     const folderId = `${Date.now()}-${cleanName}`;
     
     // Resolve paths
@@ -79,8 +84,6 @@ const uploadRepo = (req, res) => {
 const analyzeRepo = async (req, res) => {
   try {
     const { folderId } = req.body;
-    const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
-    const model = req.body.model || req.query.model || req.headers['x-model'];
 
     // Validate that folderId was provided in the request
     if (!folderId) {
@@ -100,12 +103,29 @@ const analyzeRepo = async (req, res) => {
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
 
-    // Analyze the repository tree using the AI service
-    const architecture = await analyzeRepository({ repositoryStructure: repoTree, provider, model });
+    // Analyze the repository structure using Gemini API
+    const architecture = await analyzeArchitecture(repoTree);
 
-    // Return both the scanned tree and the AI-generated architecture graph
+    // Save the analysis to the MongoDB database if connected
+    if (mongoose.connection.readyState === 1) {
+      try {
+        await Analysis.findOneAndUpdate(
+          { folderId },
+          { repoTree, architecture },
+          { upsert: true, new: true }
+        );
+        console.log(`💾 Saved analysis successfully for: ${folderId}`);
+      } catch (dbErr) {
+        console.error('⚠️ Database save error:', dbErr.message);
+      }
+    } else {
+      console.warn('⚠️ MongoDB not connected. Skipping database write.');
+    }
+
+    // Return the scanned tree and architecture analysis
+    // Uses fileTree key to match the frontend expectations
     return res.status(200).json({
-      repoTree: repoTree,
+      fileTree: repoTree,
       architecture: architecture
     });
   } catch (error) {
@@ -117,8 +137,74 @@ const analyzeRepo = async (req, res) => {
   }
 };
 
+/**
+ * 4. Clone Repo Endpoint
+ * Clones a Git repository from a URL into the uploads folder.
+ */
+const cloneRepo = async (req, res) => {
+  try {
+    const { repoUrl } = req.body;
+
+    if (!repoUrl) {
+      return res.status(400).json({ error: 'Missing repoUrl in request body.' });
+    }
+
+    // Sanitize GitHub browser URLs to extract the base clone URL.
+    // Users often paste URLs like:
+    //   https://github.com/user/repo/tree/main
+    //   https://github.com/user/repo/blob/main/file.js
+    //   https://github.com/user/repo/issues
+    // Git clone only accepts: https://github.com/user/repo
+    let cleanRepoUrl = repoUrl.trim();
+    try {
+      const parsedUrl = new URL(cleanRepoUrl);
+      const parts = parsedUrl.pathname.split('/').filter(Boolean);
+      // GitHub repo path is always /owner/repo — everything after is browser navigation
+      if (parts.length >= 2) {
+        const owner = parts[0];
+        const repo = parts[1].replace(/\.git$/, '');
+        cleanRepoUrl = `${parsedUrl.protocol}//${parsedUrl.host}/${owner}/${repo}`;
+      }
+    } catch (e) {
+      // If URL parsing fails, use original URL as-is
+    }
+
+    // Extract a clean name from the sanitized URL
+    let repoName = 'cloned-repo';
+    try {
+      const parsedUrl = new URL(cleanRepoUrl);
+      const parts = parsedUrl.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        repoName = parts[1].replace(/\.git$/, '');
+      }
+    } catch (e) {
+      // Use fallback name
+    }
+
+    const cleanName = repoName.replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 15);
+    const folderId = `clone-${Date.now()}-${cleanName}`;
+    const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
+
+    // Run git clone command with depth 1 using the sanitized URL
+    console.log(`Cloning repository ${cleanRepoUrl} to ${extractPath}...`);
+    await execPromise(`git clone --depth 1 "${cleanRepoUrl}" "${extractPath}"`);
+
+    return res.status(200).json({
+      message: 'Repository cloned successfully',
+      folderId: folderId
+    });
+  } catch (error) {
+    console.error('Error during repository cloning:', error);
+    return res.status(500).json({
+      error: 'Failed to clone the git repository',
+      details: error.message
+    });
+  }
+};
+
 module.exports = {
   getHealth,
   uploadRepo,
-  analyzeRepo
+  analyzeRepo,
+  cloneRepo
 };
