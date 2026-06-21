@@ -522,6 +522,38 @@ curl -X POST http://localhost:5000/analyze \
 
 ---
 
+### ✅ Day 5 Test — File Explanations, Relationships & Auto README
+
+This verifies the completed integration of Day 5 features:
+
+#### Test A: File Details & Explanations (Clicking Nodes)
+1. Open the dashboard and click any file in the Sidebar Explorer or on the Visual Canvas.
+2. Verify that the side panel opens and successfully renders:
+   * **Purpose**: Meaningful AI-generated purpose of the file.
+   * **Inputs Parsed**: Inputs, parameter structures, or props consumed.
+   * **Outputs Generated**: Exported functions, endpoints, or returned objects.
+   * **Dependencies**: External packages or internal helpers imported.
+   * **Architectural Role**: E.g., Controller, Router, View / Component, Database Model.
+
+#### Test B: Curved-Path File Relationships
+1. Select a file in the sidebar to activate it.
+2. Verify that the visualizer transitions to the file dependency visualizer.
+3. Confirm that curved relationship lines are drawn between:
+   * Left side imports/dependencies cards pointing to the center active card.
+   * Center active card pointing to right side exports cards.
+
+#### Test C: Auto README Generation
+1. In the sidebar, click the **"Generate README.md"** button.
+2. Verify that the loading indicator spins, a request is made to `/generate-readme` (or `/api/generate-readme` in sandbox), and a compiled markdown README is returned.
+
+#### Test D: Dual LLM Fallback (Gemini -> Groq -> Programmatic)
+1. In backend logs, simulate a Gemini outage (e.g. by temporarily clearing `GEMINI_API_KEY` in `.env`).
+2. Execute a file click.
+3. Verify the logs output: `Gemini explanation failed... Trying Groq fallback...`
+4. Verify the panel displays the fallback Groq-generated details successfully.
+
+---
+
 ## ✅ Day 4 End-of-Day Checklist
 
 Use this checklist to confirm the MVP is complete:
@@ -535,4 +567,21 @@ Use this checklist to confirm the MVP is complete:
 - [ ] Backend logs show which AI engine was used (Gemini / Groq / Programmatic)
 - [ ] `node ai/test-cases.js` passes all tests
 - [ ] `http://localhost:5000/health` returns status ok
+
+---
+
+## ✅ Day 5 End-of-Day Checklist
+
+Use this checklist to confirm the Day 5 task is fully complete:
+
+- [x] All sandbox files (`geminiService.js`, `groqService.js`, `llmService.js`, `server.js`) are updated with Day 5 capabilities.
+- [x] Clicking any folder/file node in the Explorer tree or canvas queries `/explain` correctly.
+- [x] Node Details Panel parses and displays file `purpose`, `inputs`, `outputs`, `dependencies`, and `role`.
+- [x] Tech Stack summary dynamically scans and prints detected technologies (Next.js, Express, MongoDB).
+- [x] Curved link paths are rendered on the canvas connecting active files with their dependencies.
+- [x] Export Map creates and downloads a PNG graphic of the dependency graph.
+- [x] `node ai/test-cases.js` executes and passes all test scenarios under both Gemini and Groq engines on port 3001.
+- [x] `.env` remains ignored by Git to preserve API keys.
+- [x] Root `.gitignore` ignores task doc and node_modules backup folders cleanly.
+
 
