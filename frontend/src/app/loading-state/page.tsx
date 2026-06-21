@@ -125,6 +125,7 @@ function LoadingStateContent() {
       setProgress(100);
       setLogs((prevLogs) => [...prevLogs, '✓ Complete! Launching dashboard...']);
       sessionStorage.setItem('codemap_tree', JSON.stringify(analysisData));
+      sessionStorage.setItem('codemap_folderId', folderId);
       router.push('/dashboard');
     }, 260);
 

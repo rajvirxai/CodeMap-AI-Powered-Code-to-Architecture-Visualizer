@@ -4,6 +4,7 @@ interface AIData {
   purpose: string;
   inputs: string[];
   outputs: string[];
+  dependencies?: string[];
   role: string;
 }
 
@@ -32,7 +33,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-6 right-6 w-96 h-[calc(100vh-3rem)] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-[#E5E0D5] z-40 text-[#1E1F22] flex flex-col transition-all duration-300 p-6 space-y-6">
+    <div className="fixed top-20 right-6 w-96 h-[calc(100vh-6rem)] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-[#E5E0D5] z-40 text-[#1E1F22] flex flex-col transition-all duration-300 p-6 space-y-6">
       
       {/* Panel Header */}
       <div className="flex justify-between items-start">
@@ -95,7 +96,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
               </p>
             </div>
 
-            {/* Charcoal Block for Inputs & Outputs */}
+            {/* Charcoal Block for Inputs, Outputs & Dependencies */}
             <div className="bg-[#1E1F22] rounded-[24px] p-4 text-white space-y-4 shadow-inner">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#FFD13B] block mb-1">Inputs Parsed</span>
@@ -114,6 +115,17 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
                   {node.aiDetails?.outputs?.map((out, idx) => (
                     <span key={idx} className="text-xs bg-white/10 px-2.5 py-1 rounded-full text-neutral-200">
                       {out}
+                    </span>
+                  )) || <span className="text-xs opacity-50 italic">None</span>}
+                </div>
+              </div>
+
+              <div className="border-t border-white/10 pt-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#38BDF8] block mb-1">Dependencies</span>
+                <div className="flex flex-wrap gap-1">
+                  {node.aiDetails?.dependencies?.map((dep, idx) => (
+                    <span key={idx} className="text-xs bg-white/10 px-2.5 py-1 rounded-full text-neutral-200">
+                      {dep}
                     </span>
                   )) || <span className="text-xs opacity-50 italic">None</span>}
                 </div>

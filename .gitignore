@@ -12,3 +12,11 @@ yarn-error.log*
 
 # Environment variables
 .env
+
+# Task / Goal descriptions
+Day 5 Task - AI Team & Integrated Goals.txt
+
+# Backups and old build directories
+**/node_modules_old/
+**/node_modules_broken_backup/
+**/.next_old/

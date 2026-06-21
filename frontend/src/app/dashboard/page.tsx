@@ -35,6 +35,7 @@ interface Architecture {
   entryPoint: string;
   modules: ArchitectureModule[];
   summary?: string;
+  techStack?: string[];
 }
 
 export default function DashboardPage() {
@@ -43,6 +44,58 @@ export default function DashboardPage() {
   const [activeFile, setActiveFile] = useState<string>('index.js');
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingReadme, setIsGeneratingReadme] = useState(false);
+
+  const downloadReadmeFile = (content: string) => {
+    const element = document.createElement("a");
+    const file = new Blob([content], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = "README.md";
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const handleGenerateReadme = async () => {
+    setIsGeneratingReadme(true);
+    const folderId = sessionStorage.getItem('codemap_folderId') || 'mock-app';
+    
+    if (folderId.startsWith('mock-') || folderId === 'mock-app') {
+      setTimeout(() => {
+        setIsGeneratingReadme(false);
+        const mockReadme = `# my-app\n\nGenerated automatically via CodeMap.\n\n## Heuristics\n- Sample documentation\n- Project type: mock`;
+        downloadReadmeFile(mockReadme);
+      }, 1500);
+      return;
+    }
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const response = await fetch(`${backendUrl}/generate-readme`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ folderId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate README');
+      }
+
+      const data = await response.json();
+      if (data.readme) {
+        downloadReadmeFile(data.readme);
+      } else {
+        throw new Error('Empty readme generated');
+      }
+    } catch (err: any) {
+      console.error('Error generating README:', err);
+      alert('Failed to generate README: ' + err.message);
+    } finally {
+      setIsGeneratingReadme(false);
+    }
+  };
 
   // Retrieve cached repository tree from loading stage
   useEffect(() => {
@@ -110,13 +163,209 @@ export default function DashboardPage() {
   const handleZoomOut = () => setZoomScale(prev => Math.max(prev - 0.1, 0.5));
   const handleZoomReset = () => setZoomScale(1);
 
-  // Export handler
+  // Export handler to dynamically compile visual canvas layout as a PNG file download
   const handleExport = () => {
     setIsExporting(true);
-    setTimeout(() => {
+    
+    const width = 1200;
+    const height = 800;
+    let svgContent = '';
+    
+    // Construct SVG header
+    svgContent += `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+    svgContent += `
+      <style>
+        .bg-grid { fill: #FCFBF9; }
+        .grid-line { stroke: #E5E0D5; stroke-width: 1; opacity: 0.35; }
+        .card-border { stroke: #E5E0D5; stroke-width: 1; fill: #FFFFFF; }
+        .card-active { stroke: #1E1F22; stroke-width: 2; fill: #FFFFFF; }
+        .text-label { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; fill: #1E1F22; font-weight: bold; }
+        .text-sub { font-family: sans-serif; font-size: 10px; fill: #C2BBA8; font-weight: bold; }
+        .badge-text { font-family: sans-serif; font-size: 8px; font-weight: bold; fill: #FFFFFF; }
+        .connection-line { stroke: #C2BBA8; stroke-width: 2; stroke-dasharray: 5,5; fill: none; }
+      </style>
+    `;
+    
+    // Draw background grid lines
+    svgContent += `<rect width="${width}" height="${height}" class="bg-grid" />`;
+    for (let x = 0; x < width; x += 40) {
+      svgContent += `<line x1="${x}" y1="0" x2="${x}" y2="${height}" class="grid-line" />`;
+    }
+    for (let y = 0; y < height; y += 40) {
+      svgContent += `<line x1="0" y1="${y}" x2="${width}" y2="${y}" class="grid-line" />`;
+    }
+    
+    if (fileDiagramData) {
+      // --- DRAW DYNAMIC FILE DEPENDENCY DIAGRAM ---
+      const leftNodes = Array.from(new Set([...fileDiagramData.imports, ...fileDiagramData.dependencies]));
+      const rightNodes = fileDiagramData.exports || [];
+      
+      const cx = 600 - 110;
+      const cy = 400 - 60;
+      const cw = 220;
+      const ch = 120;
+      
+      // Center Active Node Card
+      svgContent += `<rect x="${cx}" y="${cy}" width="${cw}" height="${ch}" rx="28" ry="28" class="card-active" />`;
+      svgContent += `<text x="${cx + cw/2}" y="${cy + 40}" text-anchor="middle" class="text-sub">ACTIVE FILE</text>`;
+      svgContent += `<text x="${cx + cw/2}" y="${cy + 65}" text-anchor="middle" class="text-label">${activeFile}</text>`;
+      svgContent += `<text x="${cx + cw/2}" y="${cy + 90}" text-anchor="middle" class="text-sub" style="font-size: 8px; fill: #FF7563;">CODE MODULE</text>`;
+      
+      // Left Imports Cards
+      const lCount = leftNodes.length;
+      const lStartY = 400 - (lCount * 60) / 2 + 10;
+      leftNodes.forEach((nodeName, idx) => {
+        const lx = 80;
+        const ly = lStartY + idx * 60;
+        const lw = 240;
+        const lh = 44;
+        
+        svgContent += `<rect x="${lx}" y="${ly}" width="${lw}" height="${lh}" rx="20" ry="20" class="card-border" />`;
+        svgContent += `<circle cx="${lx + 20}" cy="${ly + lh/2}" r="4" fill="#60A5FA" />`;
+        svgContent += `<text x="${lx + 35}" y="${ly + lh/2 + 4}" class="text-label" style="font-size: 11px;">${nodeName}</text>`;
+        
+        const startX = lx + lw;
+        const startY = ly + lh / 2;
+        const endX = cx;
+        const endY = cy + ch / 2;
+        const ctrlX = (startX + endX) / 2;
+        svgContent += `<path d="M ${startX} ${startY} C ${ctrlX} ${startY}, ${ctrlX} ${endY}, ${endX} ${endY}" class="connection-line" />`;
+      });
+      
+      // Right Exports Cards
+      const rCount = rightNodes.length;
+      const rStartY = 400 - (rCount * 60) / 2 + 10;
+      rightNodes.forEach((nodeName, idx) => {
+        const rx = 880;
+        const ry = rStartY + idx * 60;
+        const rw = 240;
+        const rh = 44;
+        
+        svgContent += `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="20" ry="20" class="card-border" />`;
+        svgContent += `<circle cx="${rx + 20}" cy="${ry + rh/2}" r="4" fill="#34D399" />`;
+        svgContent += `<text x="${rx + 35}" y="${ry + rh/2 + 4}" class="text-label" style="font-size: 11px;">${nodeName}</text>`;
+        
+        const startX = cx + cw;
+        const startY = cy + ch / 2;
+        const endX = rx;
+        const endY = ry + rh / 2;
+        const ctrlX = (startX + endX) / 2;
+        svgContent += `<path d="M ${startX} ${startY} C ${ctrlX} ${startY}, ${ctrlX} ${endY}, ${endX} ${endY}" class="connection-line" />`;
+      });
+    } else {
+      // --- DRAW HIERARCHICAL MODULES TREE ---
+      const modulesList = (architecture && architecture.modules) ? architecture.modules : [];
+      const mCount = modulesList.length;
+      
+      const rx = 600 - 80;
+      const ry = 80;
+      const rw = 160;
+      const rh = 70;
+      
+      // Root Node Entry Card
+      svgContent += `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="20" ry="20" class="card-active" />`;
+      svgContent += `<text x="${600}" y="${ry + 30}" text-anchor="middle" class="text-sub">ENTRY POINT</text>`;
+      svgContent += `<text x="${600}" y="${ry + 50}" text-anchor="middle" class="text-label">${activeFile}</text>`;
+      
+      if (mCount > 0) {
+        const entryBottomY = ry + rh;
+        const connectorBarY = entryBottomY + 20;
+        
+        const moduleWidth = 170;
+        const moduleHeight = 100;
+        const gap = (1200 - mCount * moduleWidth) / (mCount + 1);
+        
+        const firstMX = gap + moduleWidth/2;
+        const lastMX = gap + (mCount - 1) * (moduleWidth + gap) + moduleWidth/2;
+        
+        svgContent += `<line x1="600" y1="${entryBottomY}" x2="600" y2="${connectorBarY}" class="connection-line" />`;
+        if (mCount > 1) {
+          svgContent += `<line x1="${firstMX}" y1="${connectorBarY}" x2="${lastMX}" y2="${connectorBarY}" class="connection-line" />`;
+        }
+        
+        modulesList.forEach((mod, idx) => {
+          const mx = gap + idx * (moduleWidth + gap);
+          const my = connectorBarY + 20;
+          
+          svgContent += `<line x1="${mx + moduleWidth/2}" y1="${connectorBarY}" x2="${mx + moduleWidth/2}" y2="${my}" class="connection-line" />`;
+          
+          let badgeColor = '#3B82F6';
+          const typeL = mod.type.toLowerCase();
+          if (typeL.includes('util') || typeL.includes('helper')) badgeColor = '#10B981';
+          else if (typeL.includes('route') || typeL.includes('router')) badgeColor = '#8B5CF6';
+          else if (typeL.includes('controller')) badgeColor = '#F59E0B';
+          else if (typeL.includes('database') || typeL.includes('model') || typeL.includes('db')) badgeColor = '#F43F5E';
+          
+          // Module Card
+          svgContent += `<rect x="${mx}" y="${my}" width="${moduleWidth}" height="${moduleHeight}" rx="20" ry="20" class="card-border" />`;
+          svgContent += `<rect x="${mx + 15}" y="${my + 15}" width="70" height="18" rx="9" ry="9" fill="${badgeColor}" />`;
+          svgContent += `<text x="${mx + 50}" y="${my + 27}" text-anchor="middle" class="badge-text">${mod.type.toUpperCase()}</text>`;
+          svgContent += `<text x="${mx + 15}" y="${my + 54}" class="text-label" style="font-size: 11px;">${mod.name}</text>`;
+          const descWord = mod.description ? (mod.description.substring(0, 24) + '...') : '';
+          svgContent += `<text x="${mx + 15}" y="${my + 75}" class="text-sub" style="font-size: 8px;">${descWord}</text>`;
+          
+          // Children Cards
+          if (mod.children && mod.children.length > 0) {
+            const fileStartY = my + moduleHeight + 30;
+            svgContent += `<line x1="${mx + moduleWidth/2}" y1="${my + moduleHeight}" x2="${mx + moduleWidth/2}" y2="${fileStartY - 30}" class="connection-line" />`;
+            
+            mod.children.forEach((childName, cIdx) => {
+              const fx = mx + moduleWidth/2 - 70;
+              const fy = fileStartY + cIdx * 50;
+              const fw = 140;
+              const fh = 36;
+              
+              svgContent += `<line x1="${mx + moduleWidth/2}" y1="${fy - 14}" x2="${mx + moduleWidth/2}" y2="${fy}" class="connection-line" />`;
+              svgContent += `<rect x="${fx}" y="${fy}" width="${fw}" height="${fh}" rx="12" ry="12" class="card-border" style="fill: #FCFBF9;" />`;
+              svgContent += `<text x="${fx + fw/2}" y="${fy + 21}" text-anchor="middle" class="text-label" style="font-size: 10px;">${childName}</text>`;
+            });
+          }
+        });
+      }
+    }
+    
+    svgContent += `</svg>`;
+    
+    // Compile SVG image using canvas to create standard PNG
+    const img = new Image();
+    img.width = width;
+    img.height = height;
+    
+    const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const pngUrl = canvas.toDataURL('image/png');
+        
+        const element = document.createElement("a");
+        element.href = pngUrl;
+        element.download = `codemap-architecture-${activeFile}.png`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        URL.revokeObjectURL(url);
+        setIsExporting(false);
+      }
+    };
+    
+    img.onerror = () => {
       setIsExporting(false);
-      alert('CodeMap architecture exported successfully as PNG!');
-    }, 1200);
+      alert('PNG compilation failed. Exporting as SVG file instead.');
+      const element = document.createElement("a");
+      element.href = url;
+      element.download = `codemap-architecture-${activeFile}.svg`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    };
+    
+    img.src = url;
   };
 
   // Managing states for tracking clicked nodes, loading indicators, and API status
@@ -207,15 +456,19 @@ export default function DashboardPage() {
     };
   }, [activeFileNode]);
 
-  const handleNodeClick = (clickedNodeData: any) => {
+  const handleNodeClick = async (clickedNodeData: any) => {
     setSelectedNode({ id: clickedNodeData.id, type: clickedNodeData.type });
     setIsPanelOpen(true);
     setIsAIAnalyzing(true);
     setApiError(null);
 
+    const folderId = sessionStorage.getItem('codemap_folderId') || 'mock-app';
+    const isMock = folderId.startsWith('mock-') || folderId === 'mock-app';
+
     let related: string[] = ["index.js", "package.json"];
     let inputs: string[] = ["import"];
     let outputs: string[] = ["export"];
+    let localDeps: string[] = ["None"];
     
     const findNode = (node: FileNode, targetName: string): FileNode | null => {
       if (node.name === targetName) return node;
@@ -243,26 +496,82 @@ export default function DashboardPage() {
         related = [...related, ...realNode.exports];
       }
       if (realNode.dependencies && realNode.dependencies.length > 0) {
+        localDeps = realNode.dependencies.slice(0, 4);
         related = [...related, ...realNode.dependencies];
       }
     }
 
     related = Array.from(new Set(related)).filter(f => f !== clickedNodeData.id).slice(0, 5);
 
-    setTimeout(() => {
+    if (isMock) {
+      setTimeout(() => {
+        setIsAIAnalyzing(false);
+        setSelectedNode({
+          id: clickedNodeData.id,
+          type: clickedNodeData.type,
+          aiDetails: {
+            purpose: `Coordinates system operations for ${clickedNodeData.id}. It structures local API requests/responses, integrates downstream resources, and maintains dynamic flow control across related repository files.`,
+            inputs: inputs.length > 0 ? inputs : ["None"],
+            outputs: outputs.length > 0 ? outputs : ["None"],
+            dependencies: localDeps,
+            role: `${clickedNodeData.type}`
+          },
+          relatedFiles: related
+        });
+      }, 500);
+      return;
+    }
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const response = await fetch(`${backendUrl}/explain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          folderId,
+          filePath: clickedNodeData.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch explanation from AI.');
+      }
+
+      const data = await response.json();
       setIsAIAnalyzing(false);
       setSelectedNode({
         id: clickedNodeData.id,
         type: clickedNodeData.type,
         aiDetails: {
-          purpose: `Coordinates system operations for ${clickedNodeData.id}. It structures local API requests/responses, integrates downstream resources, and maintains dynamic flow control across related repository files.`,
+          purpose: data.purpose || 'No description available.',
+          inputs: data.inputs && data.inputs.length > 0 ? data.inputs : ['None'],
+          outputs: data.outputs && data.outputs.length > 0 ? data.outputs : ['None'],
+          dependencies: data.dependencies && data.dependencies.length > 0 ? data.dependencies : ['None'],
+          role: data.role || clickedNodeData.type
+        },
+        relatedFiles: data.dependencies && data.dependencies.length > 0 
+          ? Array.from(new Set([...related, ...data.dependencies])).filter(f => f !== clickedNodeData.id).slice(0, 5)
+          : related
+      });
+
+    } catch (err: any) {
+      console.warn('API call failed, falling back to local description generation.', err);
+      setIsAIAnalyzing(false);
+      setSelectedNode({
+        id: clickedNodeData.id,
+        type: clickedNodeData.type,
+        aiDetails: {
+          purpose: `Coordinates system operations for ${clickedNodeData.id}. (API connection fallback: using localized heuristics)`,
           inputs: inputs.length > 0 ? inputs : ["None"],
           outputs: outputs.length > 0 ? outputs : ["None"],
+          dependencies: localDeps,
           role: `${clickedNodeData.type}`
         },
         relatedFiles: related
       });
-    }, 850);
+    }
   };
 
   const handleCanvasNodeClick = (nodeName: string, nodeType: string) => {
@@ -375,15 +684,50 @@ export default function DashboardPage() {
         </div>
         
         {architecture && architecture.summary && (
-          <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 overflow-y-auto max-h-40">
+          <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 overflow-y-auto max-h-[170px]">
             <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-2">
               Project Summary
             </span>
-            <p className="text-[11px] font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50">
+            <p className="text-[11px] font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50 mb-3">
               {architecture.summary}
             </p>
+            {architecture.techStack && architecture.techStack.length > 0 && (
+              <div>
+                <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-1.5">
+                  Tech Stack
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {architecture.techStack.map((tech, idx) => (
+                    <span 
+                      key={idx} 
+                      className="text-[9px] font-mono font-bold bg-[#1E1F22] text-white px-2 py-0.5 rounded-md"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
+
+        <button
+          onClick={handleGenerateReadme}
+          disabled={isGeneratingReadme}
+          className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-[#1E1F22] hover:bg-[#2D2E32] text-white text-xs font-bold rounded-[16px] shadow-sm hover:shadow active:scale-98 transition-all disabled:opacity-50 shrink-0"
+        >
+          {isGeneratingReadme ? (
+            <>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Generating...</span>
+            </>
+          ) : (
+            <>
+              <File className="w-3.5 h-3.5 text-white" />
+              <span>Generate README.md</span>
+            </>
+          )}
+        </button>
 
         <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
