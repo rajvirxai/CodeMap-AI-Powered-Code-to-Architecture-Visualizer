@@ -30,10 +30,14 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   isLoading,
   error,
 }) => {
-  if (!isOpen) return null;
+  // Always render to allow smooth slide-in/out animations
 
   return (
-    <div className="fixed top-20 right-6 w-96 h-[calc(100vh-6rem)] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-[#E5E0D5] z-40 text-[#1E1F22] flex flex-col transition-all duration-300 p-6 space-y-6">
+    <div 
+      className={`fixed top-20 right-6 w-96 h-[calc(100vh-6rem)] bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-[#E5E0D5] z-40 text-[#1E1F22] flex flex-col transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] p-6 space-y-6 ${
+        isOpen ? 'translate-x-0 opacity-100' : 'translate-x-[110%] opacity-0 pointer-events-none'
+      }`}
+    >
       
       {/* Panel Header */}
       <div className="flex justify-between items-start">

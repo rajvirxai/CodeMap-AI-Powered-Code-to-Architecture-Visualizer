@@ -684,23 +684,26 @@ export default function DashboardPage() {
         </div>
         
         {architecture && architecture.summary && (
-          <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 overflow-y-auto max-h-[170px]">
-            <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-2">
+          <div className="mt-4 shrink-0 overflow-y-auto max-h-[220px] relative overflow-hidden bg-[#1E1F22] text-white p-5 rounded-[24px] shadow-inner">
+            <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-[#FFD13B] rounded-full filter blur-xl opacity-20"></div>
+            <div className="absolute bottom-[-10px] left-[-10px] w-16 h-16 bg-[#FF7563] rounded-full filter blur-xl opacity-20"></div>
+            
+            <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-2 relative z-10">
               Project Summary
             </span>
-            <p className="text-[11px] font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50 mb-3">
+            <p className="text-[11px] font-sans text-neutral-300 leading-relaxed relative z-10 mb-3">
               {architecture.summary}
             </p>
             {architecture.techStack && architecture.techStack.length > 0 && (
-              <div>
-                <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-1.5">
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1.5 opacity-80">
                   Tech Stack
                 </span>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {architecture.techStack.map((tech, idx) => (
                     <span 
                       key={idx} 
-                      className="text-[9px] font-mono font-bold bg-[#1E1F22] text-white px-2 py-0.5 rounded-md"
+                      className="text-[9px] font-mono font-bold bg-white/10 text-white px-2.5 py-1 rounded-md"
                     >
                       {tech}
                     </span>
@@ -774,6 +777,31 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-auto relative bg-[#FCFBF9] border border-[#E5E0D5] rounded-[32px] shadow-sm flex items-center justify-center p-8">
           
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#E5E0D5_1px,transparent_1px),linear-gradient(to_bottom,#E5E0D5_1px,transparent_1px)] bg-[size:2.5rem_2.5rem] opacity-35 pointer-events-none" />
+
+          {/* Node Colors Legend */}
+          <div className="absolute top-6 left-6 bg-white/80 backdrop-blur-md border border-[#E5E0D5] p-4 rounded-[20px] shadow-sm z-20 flex flex-col gap-3 min-w-[160px]">
+            <span className="text-[9px] font-bold tracking-wider text-neutral-400 uppercase mb-0.5">Node Types</span>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm"></span>
+              <span className="text-[10px] font-bold text-neutral-600">Default Module</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></span>
+              <span className="text-[10px] font-bold text-neutral-600">Utility / Helper</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm"></span>
+              <span className="text-[10px] font-bold text-neutral-600">Route / Router</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm"></span>
+              <span className="text-[10px] font-bold text-neutral-600">Controller</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-sm"></span>
+              <span className="text-[10px] font-bold text-neutral-600">Database / Model</span>
+            </div>
+          </div>
 
           <div 
             className="transition-transform duration-200 ease-out origin-center flex flex-col items-center justify-center min-w-[500px]"
