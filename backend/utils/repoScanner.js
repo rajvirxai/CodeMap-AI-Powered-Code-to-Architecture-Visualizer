@@ -9,23 +9,35 @@
 const fs = require('fs');
 const path = require('path');
 
+// Constants for performance and safety
+const MAX_FILE_SIZE_FOR_METADATA = 500 * 1024; // 500 KB limit to prevent reading massive files
+const IGNORED_FOLDERS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.vscode', 'tmp', '.next', 'out']);
+
 /**
  * Recursively scans a directory and builds a nested JSON structure.
  * 
  * @param {string} currentPath - The absolute path of the file or folder to scan.
  * @param {string} name - The display name of the current file or folder.
  * @param {string} relativePath - The relative path from the root.
+ * @param {boolean|null} isDirectory - Optimization flag to avoid redundant fs.statSync calls.
  * @returns {object|null} The JSON tree node, or null if an error occurs.
  */
-function scanDirectory(currentPath, name, relativePath = '') {
+function scanDirectory(currentPath, name, relativePath = '', isDirectory = null) {
   try {
-    // Get system statistics for the current path (checks if it's a directory, file size, etc.)
-    const stats = fs.statSync(currentPath);
+    // 1. Determine if the current path is a directory
+    // If we already know (from parent's readdirSync), we skip the expensive statSync call
+    let isDir = isDirectory;
+    let stats = null;
+
+    if (isDir === null) {
+      stats = fs.statSync(currentPath);
+      isDir = stats.isDirectory();
+    }
 
     const currentRelativePath = relativePath || name;
 
     // If the path points to a file, we return a simple file node
-    if (!stats.isDirectory()) {
+    if (!isDir) {
       const ext = path.extname(name);
       const fileNode = {
         name: name,
@@ -38,6 +50,20 @@ function scanDirectory(currentPath, name, relativePath = '') {
       const codeExtensions = ['.js', '.jsx', '.ts', '.tsx'];
       if (codeExtensions.includes(ext.toLowerCase())) {
         try {
+          // Fetch stats if we don't have them yet to check file size
+          if (!stats) stats = fs.statSync(currentPath);
+
+          // Edge case: Prevent crashing or hanging on extremely large files (e.g., bundled code)
+          if (stats.size > MAX_FILE_SIZE_FOR_METADATA) {
+            console.warn(`[Scanner Warning] Skipping metadata extraction for large file: ${currentPath} (${Math.round(stats.size/1024)}KB)`);
+            return fileNode;
+          }
+
+          // Edge case: Empty file
+          if (stats.size === 0) {
+             return fileNode; // Nothing to extract from an empty file
+          }
+
           // Read the file content as a string
           const content = fs.readFileSync(currentPath, 'utf8');
 
@@ -124,25 +150,26 @@ function scanDirectory(currentPath, name, relativePath = '') {
       children: []
     };
 
-    // Read all files/folders inside the current directory
-    const files = fs.readdirSync(currentPath);
+    // Read all files/folders inside the current directory efficiently
+    // using withFileTypes: true to get Dirent objects, saving stat calls!
+    const items = fs.readdirSync(currentPath, { withFileTypes: true });
 
-    // List of common junk folders to ignore
-    const ignoredFolders = ['node_modules', '.git', 'dist', 'build', 'coverage', '.vscode', 'tmp', '.next', 'out'];
+    for (const item of items) {
+      const itemName = item.name;
 
-    for (const file of files) {
-      // Skip hidden files/directories and dependency/build folders
+      // Skip hidden files/directories and dependency/build folders early
       // to avoid bloating the output tree and to improve performance.
-      if (ignoredFolders.includes(file) || file.startsWith('.')) {
+      if (IGNORED_FOLDERS.has(itemName) || itemName.startsWith('.')) {
+        console.log(`[Scanner Log] Ignored: ${currentRelativePath}/${itemName}`);
         continue;
       }
 
       // Resolve the full absolute path of the child item
-      const childPath = path.join(currentPath, file);
-      const childRelativePath = relativePath ? `${relativePath}/${file}` : `${name}/${file}`;
+      const childPath = path.join(currentPath, itemName);
+      const childRelativePath = relativePath ? `${relativePath}/${itemName}` : `${name}/${itemName}`;
 
-      // Recursively scan the child item
-      const childNode = scanDirectory(childPath, file, childRelativePath);
+      // Recursively scan the child item, passing along whether it's a directory
+      const childNode = scanDirectory(childPath, itemName, childRelativePath, item.isDirectory());
 
       if (childNode) {
         // Add it to the children array
