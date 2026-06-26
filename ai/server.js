@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateContent, analyzeRepository } from './backend/services/llmService.js';
+import { generateContent, analyzeRepository, explainCodeFile, generateReadmeFromTree } from './backend/services/llmService.js';
 
 
 dotenv.config();
@@ -70,6 +70,43 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+// API endpoint to explain a code file
+app.post('/api/explain', async (req, res) => {
+  const { fileName, fileContent } = req.body;
+  const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
+  const model = req.body.model || req.query.model || req.headers['x-model'];
+
+  if (!fileName || !fileContent) {
+    return res.status(400).json({ error: 'fileName and fileContent are required in the request body.' });
+  }
+
+  try {
+    const explanation = await explainCodeFile({ fileName, fileContent, provider, model });
+    res.json(explanation);
+  } catch (error) {
+    console.error(`Error explaining file via ${provider}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to generate README.md
+app.post('/api/generate-readme', async (req, res) => {
+  const { projectName, fileTree } = req.body;
+  const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
+  const model = req.body.model || req.query.model || req.headers['x-model'];
+
+  if (!projectName || !fileTree) {
+    return res.status(400).json({ error: 'projectName and fileTree are required in the request body.' });
+  }
+
+  try {
+    const readme = await generateReadmeFromTree({ projectName, fileTree, provider, model });
+    res.json({ readme });
+  } catch (error) {
+    console.error(`Error generating README via ${provider}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Start Server
 app.listen(port, () => {

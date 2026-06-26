@@ -16,7 +16,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const { scanDirectory } = require('../utils/repoScanner');
-const { analyzeArchitecture } = require('../utils/geminiAnalyzer');
+const { analyzeArchitecture, explainCodeFile, generateReadmeFromTree } = require('../utils/geminiAnalyzer');
 const { mongoose, Analysis } = require('../utils/db');
 
 /**
@@ -202,9 +202,117 @@ const cloneRepo = async (req, res) => {
   }
 };
 
+/**
+ * 5. Explain Code File Endpoint
+ * Reads the file content from uploads/extracted/<folderId>/<filePath> and uses Gemini to explain it.
+ */
+const explainFile = async (req, res) => {
+  try {
+    const { folderId, filePath } = req.body;
+
+    if (!folderId || !filePath) {
+      return res.status(400).json({ error: 'Missing folderId or filePath in request body.' });
+    }
+
+    // Sanitize the path to prevent directory traversal
+    const safeFilePath = path.normalize(filePath).replace(/^(\.\.(\/|\\))+/, '');
+    const absolutePath = path.join(__dirname, '../uploads/extracted', folderId, safeFilePath);
+
+    // Ensure the resolved path resides within the target extraction directory
+    const expectedBase = path.join(__dirname, '../uploads/extracted', folderId);
+    if (!absolutePath.startsWith(expectedBase)) {
+      return res.status(400).json({ error: 'Access denied: Path traversal detected.' });
+    }
+
+    // Verify file existence
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ error: `File not found: ${filePath}` });
+    }
+
+    const stats = fs.statSync(absolutePath);
+    if (stats.isDirectory()) {
+      return res.status(200).json({
+        purpose: `This is a directory folder named '${path.basename(filePath)}' containing related modules and resource files.`,
+        inputs: ['Internal child modules and files'],
+        outputs: ['Exported methods and interfaces inside its children'],
+        dependencies: [],
+        role: 'Folder / Namespace Container'
+      });
+    }
+
+    // Limit maximum file size to read (e.g. 50KB) to prevent token overflow
+    const maxSizeBytes = 50 * 1024;
+    if (stats.size > maxSizeBytes) {
+      return res.status(200).json({
+        purpose: `Large module file containing system resources and bundle declarations.`,
+        inputs: ['Various package and asset imports'],
+        outputs: ['System configurations and runtime setups'],
+        dependencies: [],
+        role: 'Large System File'
+      });
+    }
+
+    // Read file contents
+    const fileContent = fs.readFileSync(absolutePath, 'utf8');
+    const fileName = path.basename(filePath);
+
+    // Call Gemini/Groq analyzer
+    const explanation = await explainCodeFile(fileName, fileContent);
+    return res.status(200).json(explanation);
+
+  } catch (error) {
+    console.error('Error in explainFile controller:', error);
+    return res.status(500).json({
+      error: 'Failed to explain the code file',
+      details: error.message
+    });
+  }
+};
+
+/**
+ * 6. Generate README Endpoint
+ * Generates a README.md file content based on the project folder structure.
+ */
+const generateReadme = async (req, res) => {
+  try {
+    const { folderId } = req.body;
+
+    if (!folderId) {
+      return res.status(400).json({ error: 'Missing folderId in request body.' });
+    }
+
+    // Resolve target project path
+    const folderPath = path.join(__dirname, '../uploads/extracted', folderId);
+
+    if (!fs.existsSync(folderPath)) {
+      return res.status(404).json({ error: 'Folder not found. It may have expired or was deleted.' });
+    }
+
+    // Scan the directory to get tree
+    const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
+    const repoTree = scanDirectory(folderPath, folderDisplayName);
+
+    // Generate README content
+    const readmeContent = await generateReadmeFromTree(folderDisplayName, repoTree);
+
+    return res.status(200).json({
+      readme: readmeContent
+    });
+
+  } catch (error) {
+    console.error('Error in generateReadme controller:', error);
+    return res.status(500).json({
+      error: 'Failed to generate README.md content',
+      details: error.message
+    });
+  }
+};
+
 module.exports = {
   getHealth,
   uploadRepo,
   analyzeRepo,
-  cloneRepo
+  cloneRepo,
+  explainFile,
+  generateReadme
 };

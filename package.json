@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Integrated runner for CodeMap backend and frontend",
   "scripts": {
-    "backend": "npm run dev --prefix backend",
-    "frontend": "npm run dev --prefix frontend",
-    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
-    "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend"
+    "backend": "npm.cmd run dev --prefix backend",
+    "frontend": "npm.cmd run dev --prefix frontend",
+    "dev": "concurrently \"npm.cmd run backend\" \"npm.cmd run frontend\"",
+    "install-all": "npm.cmd install && npm.cmd install --prefix backend && npm.cmd install --prefix frontend"
   },
   "keywords": [
     "concurrently"

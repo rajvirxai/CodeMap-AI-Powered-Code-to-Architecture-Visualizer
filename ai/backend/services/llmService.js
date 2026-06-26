@@ -1,5 +1,5 @@
-import { ai, MODEL_NAME as GEMINI_DEFAULT_MODEL, analyzeRepository as analyzeGemini } from './geminiService.js';
-import { DEFAULT_MODEL as GROQ_DEFAULT_MODEL, generateContent as generateGroq, analyzeRepository as analyzeGroq } from './groqService.js';
+import { ai, MODEL_NAME as GEMINI_DEFAULT_MODEL, analyzeRepository as analyzeGemini, explainCodeFile as explainGemini, generateReadmeFromTree as readmeGemini } from './geminiService.js';
+import { DEFAULT_MODEL as GROQ_DEFAULT_MODEL, generateContent as generateGroq, analyzeRepository as analyzeGroq, explainCodeFile as explainGroq, generateReadmeFromTree as readmeGroq } from './groqService.js';
 import { fileURLToPath } from 'url';
 
 /**
@@ -42,9 +42,22 @@ async function analyzeRepository({ repositoryStructure, provider = 'gemini', mod
     const groqModel = model || GROQ_DEFAULT_MODEL;
     return await analyzeGroq(repositoryStructure, groqModel);
   } else {
-    // Default to Gemini
-    const geminiModel = model || GEMINI_DEFAULT_MODEL;
-    return await analyzeGemini(repositoryStructure, geminiModel);
+    // Default to Gemini with Groq fallback
+    try {
+      const geminiModel = model || GEMINI_DEFAULT_MODEL;
+      return await analyzeGemini(repositoryStructure, geminiModel);
+    } catch (error) {
+      console.warn(`Gemini analysis failed (${error.message}). Trying Groq fallback...`);
+      try {
+        return await analyzeGroq(repositoryStructure, GROQ_DEFAULT_MODEL);
+      } catch (groqError) {
+        console.warn(`Groq fallback analysis also failed (${groqError.message}). Using programmatic fallback.`);
+        // Fall back to programmatic parser via geminiService
+        const { generateFallbackResponse, validateArchitecture } = await import('./geminiService.js');
+        const fallback = generateFallbackResponse(repositoryStructure);
+        return validateArchitecture(fallback);
+      }
+    }
   }
 }
 
@@ -89,5 +102,64 @@ if (isDirectRun) {
     console.error('Groq analyzeRepository failed:', error);
   }
 }
+/**
+ * Unified code file explanation service.
+ * @param {Object} options
+ * @param {string} options.fileName - The name of the file.
+ * @param {string} options.fileContent - The file content.
+ * @param {string} [options.provider] - The LLM provider ('gemini' or 'groq').
+ * @param {string} [options.model] - Optional custom model override.
+ * @returns {Promise<Object>} The explanation JSON object.
+ */
+async function explainCodeFile({ fileName, fileContent, provider = 'gemini', model }) {
+  const selectedProvider = (provider || 'gemini').toLowerCase();
 
-export { generateContent, analyzeRepository };
+  if (selectedProvider === 'groq') {
+    return await explainGroq(fileName, fileContent, model);
+  } else {
+    try {
+      return await explainGemini(fileName, fileContent, model);
+    } catch (error) {
+      console.warn(`Gemini explanation failed (${error.message}). Trying Groq fallback...`);
+      try {
+        return await explainGroq(fileName, fileContent, GROQ_DEFAULT_MODEL);
+      } catch (groqError) {
+        console.warn(`Groq fallback explanation also failed (${groqError.message}). Using programmatic fallback.`);
+        const { generateProgrammaticExplanation } = await import('./geminiService.js');
+        return generateProgrammaticExplanation(fileName, fileContent);
+      }
+    }
+  }
+}
+
+/**
+ * Unified README generation service.
+ * @param {Object} options
+ * @param {string} options.projectName - The project name.
+ * @param {Object} options.fileTree - The repository structure JSON tree.
+ * @param {string} [options.provider] - The LLM provider.
+ * @param {string} [options.model] - Optional custom model override.
+ * @returns {Promise<string>} The generated README text.
+ */
+async function generateReadmeFromTree({ projectName, fileTree, provider = 'gemini', model }) {
+  const selectedProvider = (provider || 'gemini').toLowerCase();
+
+  if (selectedProvider === 'groq') {
+    return await readmeGroq(projectName, fileTree, model);
+  } else {
+    try {
+      return await readmeGemini(projectName, fileTree, model);
+    } catch (error) {
+      console.warn(`Gemini README generation failed (${error.message}). Trying Groq fallback...`);
+      try {
+        return await readmeGroq(projectName, fileTree, GROQ_DEFAULT_MODEL);
+      } catch (groqError) {
+        console.warn(`Groq fallback README generation also failed (${groqError.message}). Using programmatic fallback.`);
+        const { generateProgrammaticReadme } = await import('./geminiService.js');
+        return generateProgrammaticReadme(projectName, fileTree);
+      }
+    }
+  }
+}
+
+export { generateContent, analyzeRepository, explainCodeFile, generateReadmeFromTree };

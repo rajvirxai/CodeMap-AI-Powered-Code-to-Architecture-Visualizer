@@ -395,6 +395,238 @@ if (isDirectRun) {
   })();
 }
 
-export { ai, MODEL_NAME, testGemini, analyzeRepository, generateFallbackResponse, validateArchitecture };
+/**
+ * Explains a single code file using the configured Gemini model, or a fallback.
+ *
+ * @param {string} fileName - The name of the file (e.g. index.js).
+ * @param {string} fileContent - The text contents of the file.
+ * @param {string} [model] - The Gemini model to use.
+ * @returns {Promise<Object>} The explanation JSON object.
+ */
+async function explainCodeFile(fileName, fileContent, model = MODEL_NAME) {
+  const prompt = `Analyze the following code file and generate a high-quality software architecture explanation.
+  
+File Name: ${fileName}
+
+File Content:
+\`\`\`
+${fileContent}
+\`\`\`
+
+Instructions:
+1. "purpose": Summarize in 1-2 clear, simple sentences what this file's main objective is.
+2. "inputs": List up to 4 key inputs, parameter structures, imported objects/packages, props, or API payloads this file consumes.
+3. "outputs": List up to 4 key outputs, returned values, exported functions/variables, rendered elements, or API responses this file yields.
+4. "dependencies": List up to 4 key external packages or local utility files imported by this file.
+5. "role": Classify the architectural role of this file in 1-3 words (e.g., Controller, Component, Middleware, Router, Utility, Database Model, Config).
+6. Respond STRICTLY with a valid JSON object matching the schema:
+{
+  "purpose": "string",
+  "inputs": ["string"],
+  "outputs": ["string"],
+  "dependencies": ["string"],
+  "role": "string"
+}
+Do not return any markdown code fences, comments, or extra conversational text.`;
+
+  const systemInstruction = `You are a senior software architect. Analyze the code file and generate a high-quality software architecture explanation. Respond strictly with the expected JSON format.`;
+
+  if (apiKey) {
+    try {
+      console.log(`🔮 GEMINI ANALYZER: Explaining file ${fileName}...`);
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              purpose: { type: Type.STRING },
+              inputs: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              outputs: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              dependencies: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              },
+              role: { type: Type.STRING }
+            },
+            required: ["purpose", "inputs", "outputs", "dependencies", "role"]
+          }
+        }
+      });
+
+      const responseText = response.text;
+      return JSON.parse(responseText);
+    } catch (error) {
+      console.warn(`Gemini API call failed (${error.message}). Falling back to local explanation heuristics.`);
+      return generateProgrammaticExplanation(fileName, fileContent);
+    }
+  } else {
+    return generateProgrammaticExplanation(fileName, fileContent);
+  }
+}
+
+/**
+ * Programmatic explanation fallback based on file naming and basic regex.
+ */
+function generateProgrammaticExplanation(fileName, fileContent) {
+  const nameLower = fileName.toLowerCase();
+  const nameNoExt = fileName.split('.')[0];
+  
+  let purpose = `Defines module parameters and functional routines for ${fileName}.`;
+  let inputs = ['Module parameters'];
+  let outputs = ['Exported methods'];
+  let dependencies = [];
+  let role = 'Module Asset';
+
+  try {
+    const importRegex = /(?:import\s+.*?\s+from\s+['"](.*?)['"]|require\(['"](.*?)['"]\))/g;
+    let match;
+    const depsSet = new Set();
+    while ((match = importRegex.exec(fileContent)) !== null) {
+      const depName = match[1] || match[2];
+      if (depName && !depName.startsWith('.')) {
+        depsSet.add(depName);
+      }
+    }
+    dependencies = Array.from(depsSet).slice(0, 4);
+  } catch (e) {
+    // Ignore regex errors
+  }
+
+  if (nameLower.includes('controller')) {
+    role = 'Controller';
+    purpose = `Handles requests, coordinates application logic flow, and invokes business services for ${nameNoExt}.`;
+    inputs = ['HTTP request headers/body', 'URL query parameters'];
+    outputs = ['HTTP response status', 'JSON payload payloads'];
+  } else if (nameLower.includes('route')) {
+    role = 'Router';
+    purpose = `Registers API endpoints and maps incoming HTTP paths to their respective handler controllers.`;
+    inputs = ['Client request paths', 'HTTP methods (GET/POST)'];
+    outputs = ['Route handler callback mapping'];
+    dependencies.push('express');
+  } else if (nameLower.includes('model') || nameLower.includes('schema') || nameLower.includes('db')) {
+    role = 'Database Schema / Connection';
+    purpose = `Manages database connections, defines data structures, and registers collection schemas.`;
+    inputs = ['Document instantiation payloads'];
+    outputs = ['Mongoose/MongoDB document queries'];
+    dependencies.push('mongoose');
+  } else if (nameLower.includes('util') || nameLower.includes('helper')) {
+    role = 'Utility Helper';
+    purpose = `Provides helper subroutines and format calculations shared across various modules.`;
+    inputs = ['Input values/parameters'];
+    outputs = ['Formatted calculations/return values'];
+  } else if (nameLower.includes('component') || nameLower.includes('page') || /\.(jsx|tsx)$/.test(nameLower)) {
+    role = 'View / Component';
+    purpose = `Renders UI elements, hooks dynamic event handlers, and handles component layouts.`;
+    inputs = ['React props', 'User trigger clicks'];
+    outputs = ['JSX elements tree', 'State event payloads'];
+    dependencies.push('react');
+  }
+
+  return {
+    purpose,
+    inputs: inputs.length > 0 ? inputs : ['None'],
+    outputs: outputs.length > 0 ? outputs : ['None'],
+    dependencies: dependencies.length > 0 ? dependencies : ['None'],
+    role
+  };
+}
+
+/**
+ * Automatically generates a professional README.md markdown text based on a repository structure.
+ * @param {string} projectName - The name of the project.
+ * @param {Object} fileTree - The repository structure JSON tree.
+ * @param {string} [model] - The Gemini model to use.
+ * @returns {Promise<string>} The generated markdown README text.
+ */
+async function generateReadmeFromTree(projectName, fileTree, model = MODEL_NAME) {
+  const prompt = `You are a professional technical writer and senior developer. 
+Your task is to generate a comprehensive, production-ready, beautiful README.md file in markdown format for a project repository named "${projectName}".
+
+Below is the JSON file tree representation of the codebase:
+\`\`\`json
+${JSON.stringify(fileTree, null, 2)}
+\`\`\`
+
+Please include the following standard sections in the README.md:
+1. **Title and Subtitle**: A descriptive and catchy description of the project.
+2. **Key Features**: Bullets outlining the primary features.
+3. **Project Architecture**: Brief overview of the folders and architecture layers (e.g. backend routes, frontend views, utilities).
+4. **Getting Started**: Steps to install dependencies and run the application locally.
+5. **Technologies Used**: A neat list or table of the key libraries and technologies.
+6. **License / Contributing**: Standard placeholder footer text.
+
+Guidelines:
+- Return ONLY the raw markdown content.
+- Do NOT wrap your output in markdown code fences (\`\`\`markdown ... \`\`\`).
+- Make the writing professional, readable, and highly informative.`;
+
+  if (apiKey) {
+    try {
+      console.log(`🔮 GEMINI ANALYZER: Generating README.md for ${projectName} using Gemini...`);
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt
+      });
+      return response.text.trim().replace(/^```markdown\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    } catch (error) {
+      console.warn(`Gemini README generation failed. Falling back to programmatic README fallback. Error: ${error.message}`);
+      return generateProgrammaticReadme(projectName, fileTree);
+    }
+  } else {
+    return generateProgrammaticReadme(projectName, fileTree);
+  }
+}
+
+/**
+ * Programmatic README generator fallback.
+ */
+function generateProgrammaticReadme(projectName, fileTree) {
+  const displayName = projectName || 'My Project';
+  return `# ${displayName}
+
+A software project codebase visualizer.
+
+## 🚀 Key Features
+- High-level directory tree parsing and visualization.
+- Automated module structural layout connection.
+- Isolated service verification and code analysis pipelines.
+
+## 📁 Repository Structure
+An overview of the codebase organization:
+\`\`\`
+${JSON.stringify(fileTree, null, 2)}
+\`\`\`
+
+## 🛠️ Installation & Setup
+1. Clone this repository locally.
+2. Run \`npm install\` to boot dependencies.
+3. Execute \`npm run dev\` to launch the development environment.
+
+## 📝 License
+Distributed under the ISC License. Free for local utilization and contributions.`;
+}
+
+export {
+  ai,
+  MODEL_NAME,
+  testGemini,
+  analyzeRepository,
+  generateFallbackResponse,
+  validateArchitecture,
+  explainCodeFile,
+  generateProgrammaticExplanation,
+  generateReadmeFromTree,
+  generateProgrammaticReadme
+};
 
 

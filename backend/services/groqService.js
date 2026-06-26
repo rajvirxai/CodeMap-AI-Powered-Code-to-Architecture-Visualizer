@@ -1,12 +1,4 @@
-const dotenv = require('dotenv');
-const path = require('path');
 const { generateFallbackResponse, validateArchitecture } = require('./geminiService');
-
-// Load environment variables
-dotenv.config();
-if (!process.env.GROQ_API_KEY) {
-  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-}
 
 const apiKey = process.env.GROQ_API_KEY;
 

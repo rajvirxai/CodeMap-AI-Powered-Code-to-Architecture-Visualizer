@@ -4,7 +4,7 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
 
 ---
 
-## 📅 Chronological Development Roadmap (Day 1 - Day 4)
+## 📅 Chronological Development Roadmap (Day 1 - Day 5)
 
 ### 📁 Day 1: AI API Integration & Backend Setup
 * **Goal**: Establish a baseline Node.js + Express backend integrated with the Gemini API.
@@ -31,8 +31,8 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
     }
     ```
 * **Accomplishments & Deliverable**:
-  * Built the core [geminiService.js](file:///c:/Users/user/OneDrive/Desktop/ai/backend/services/geminiService.js) client mapping repo nodes.
-  * Added [groqService.js](file:///c:/Users/user/OneDrive/Desktop/ai/backend/services/groqService.js) and [llmService.js](file:///c:/Users/user/OneDrive/Desktop/ai/backend/services/llmService.js) facade to support dual AI models (Gemini & Groq) with route-level configuration.
+  * Built the core [geminiService.js](file:///C:/Users/user/Desktop/ai/backend/services/geminiService.js) client mapping repo nodes.
+  * Added [groqService.js](file:///C:/Users/user/Desktop/ai/backend/services/groqService.js) and [llmService.js](file:///C:/Users/user/Desktop/ai/backend/services/llmService.js) facade to support dual AI models (Gemini & Groq) with route-level configuration.
   * Delivered the `/analyze` route accepting structure objects and returning mapped files as typed node structures.
 
 ### 💾 Day 3: Gemini Prompt Finalization & End-to-End Pipeline
@@ -54,8 +54,8 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
   $$\text{Repository Upload} \rightarrow \text{Backend Scans Files} \rightarrow \text{JSON Structure Generated} \rightarrow \text{Gemini Analyzes Structure} \rightarrow \text{Architecture JSON Returned}$$
 * **Accomplishments & Deliverables**:
   * Created the Server-Sent Events (SSE) `/analyze-stream` pipeline to push real-time terminal logs to the loading screen.
-  * Refined prompts in [architectureprompt.txt](file:///c:/Users/user/OneDrive/Desktop/ai/ai/architectureprompt.txt) to output clean node-link relationships, discarding duplicates or orphaned pointers.
-  * Added diagnostic testing suite ([test-cases.js](file:///c:/Users/user/OneDrive/Desktop/ai/ai/test-cases.js)).
+  * Refined prompts in [architectureprompt.txt](file:///C:/Users/user/Desktop/ai/ai/architectureprompt.txt) to output clean node-link relationships, discarding duplicates or orphaned pointers.
+  * Added diagnostic testing suite ([test-cases.js](file:///C:/Users/user/Desktop/ai/ai/test-cases.js)).
 
 ### 🏆 Day 4: Prompt Improvement, Summary & End-to-End MVP
 * **Goal**: Switch to MongoDB database schema persistence, support codebase project summaries, and complete full visual rendering.
@@ -69,8 +69,8 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
       "edges": []
     }
     ```
-  * **Database Summary Persistence (Completed by Vaibhav)**: Migrated backend storage from SQLite to MongoDB using Mongoose (updating [db.js](file:///c:/Users/user/OneDrive/Desktop/ai/backend/utils/db.js)) and mapped the schema to save the generated project summary.
-  * **Frontend Panel Integration**: Enhanced visualizer dashboard in [page.tsx](file:///c:/Users/user/OneDrive/Desktop/ai/frontend/src/app/dashboard/page.tsx) to capture the `summary` string and display it inside the Left Sidebar panel card.
+  * **Database Summary Persistence (Completed by Vaibhav)**: Migrated backend storage from SQLite to MongoDB using Mongoose (updating [db.js](file:///C:/Users/user/Desktop/ai/backend/utils/db.js)) and mapped the schema to save the generated project summary.
+  * **Frontend Panel Integration**: Enhanced visualizer dashboard in [page.tsx](file:///C:/Users/user/Desktop/ai/frontend/src/app/dashboard/page.tsx) to capture the `summary` string and display it inside the Left Sidebar panel card.
   * **Repository Verification**: Tested the integrated visualizer pipeline with at least 3 different repositories.
 * **End-of-Day Success Criteria**:
   * [x] **Upload a repository**: Multipart ZIP files successfully uploaded to `/upload`.
@@ -102,6 +102,28 @@ The AI Team delivered additional features beyond the baseline success criteria:
 | 💾 **MongoDB Persistence** | Generated architecture results are saved to MongoDB via Mongoose. Degrades gracefully to in-memory mode if the database is offline. |
 | 🔗 **GitHub URL Cloning** | Users can input any GitHub URL (including browser URLs with `/tree/main`) — backend sanitizes and clones the correct base repository. |
 | ⚡ **Loading State Page** | Proper UX feedback page (`/loading-state`) with animated progress while the AI pipeline processes the repository. |
+
+### 🤖 Day 5: File-Level Explanations, Prompts Improvement, & Routing-Level Fallbacks
+* **Goal**: Deliver precise file explanations, map dependencies/assets on the canvas, automate documentation generation, and implement routing-level LLM fallbacks.
+* **Tasks**:
+  * **Improve Gemini Prompts**: Configured specific output formatting for single file analysis to return `purpose`, `inputs`, `outputs`, `dependencies`, and `role` strictly as schema-validated JSON.
+  * **Generate File-Level Explanations**: Implemented local helper endpoints (`POST /explain`) and client-side details side panels to explain files on click.
+  * **Generate Dependency Relationships**: Scanned files using regular expressions to locate imports/exports and draw real canvas link edges.
+  * **Dual-Layer Fallback Chain**: Programmed LLM routing layers (`llmService.js`) to automatically redirect failing Gemini requests to the Groq API, degrading to programmatic fallbacks only if both are unavailable.
+  * **Stretch Goals (Completed)**: Added auto README.md compilation, stack detection filters, and PNG architecture diagram downloads.
+
+#### ✅ Day 5 Criteria — Full Verification (AI Team, Team 3)
+
+| # | Success Criteria | Status | How It's Done |
+|---|---|---|---|
+| 1 | **Upload a repository** | ✅ Done | ZIP file upload and Git cloning are fully operational. |
+| 2 | **View architecture graph** | ✅ Done | Displays entry point, core modules, and nested child files. |
+| 3 | **Click any node** | ✅ Done | Launching side panel showing detailed AI Layer assessment metadata. |
+| 4 | **Understand what that file does** | ✅ Done | Explanations detail purpose, inputs, outputs, dependencies, and role. |
+| 5 | **View project summary** | ✅ Done | Sidebar explorer displays overall project summary and detected tech stack. |
+| 6 | **See actual file relationships** | ✅ Done | Renders curved-path lines linking imports, exports, and active files. |
+
+**Day 5 criteria: 6/6 ✅ — Fully satisfied.**
 
 ---
 
@@ -232,7 +254,7 @@ Analyzes repository structure trees and outputs React Flow compatible graphs.
 
 You can execute diagnostic scripts directly to run verification tests. Depending on your current working directory, run the commands from the root workspace or the `ai/` directory.
 
-### Running from the Root Workspace Directory (`c:\Users\user\OneDrive\Desktop\ai`)
+### Running from the Root Workspace Directory (`C:\Users\user\Desktop\ai`)
 
 1. **Verify All Mock Tests**:
    ```bash
@@ -251,7 +273,7 @@ You can execute diagnostic scripts directly to run verification tests. Depending
    node ai/backend/services/llmService.js
    ```
 
-### Running from the AI Sandbox Directory (`c:\Users\user\OneDrive\Desktop\ai\ai`)
+### Running from the AI Sandbox Directory (`C:\Users\user\Desktop\ai\ai`)
 
 1. **Verify All Mock Tests**:
    ```bash
@@ -500,6 +522,38 @@ curl -X POST http://localhost:5000/analyze \
 
 ---
 
+### ✅ Day 5 Test — File Explanations, Relationships & Auto README
+
+This verifies the completed integration of Day 5 features:
+
+#### Test A: File Details & Explanations (Clicking Nodes)
+1. Open the dashboard and click any file in the Sidebar Explorer or on the Visual Canvas.
+2. Verify that the side panel opens and successfully renders:
+   * **Purpose**: Meaningful AI-generated purpose of the file.
+   * **Inputs Parsed**: Inputs, parameter structures, or props consumed.
+   * **Outputs Generated**: Exported functions, endpoints, or returned objects.
+   * **Dependencies**: External packages or internal helpers imported.
+   * **Architectural Role**: E.g., Controller, Router, View / Component, Database Model.
+
+#### Test B: Curved-Path File Relationships
+1. Select a file in the sidebar to activate it.
+2. Verify that the visualizer transitions to the file dependency visualizer.
+3. Confirm that curved relationship lines are drawn between:
+   * Left side imports/dependencies cards pointing to the center active card.
+   * Center active card pointing to right side exports cards.
+
+#### Test C: Auto README Generation
+1. In the sidebar, click the **"Generate README.md"** button.
+2. Verify that the loading indicator spins, a request is made to `/generate-readme` (or `/api/generate-readme` in sandbox), and a compiled markdown README is returned.
+
+#### Test D: Dual LLM Fallback (Gemini -> Groq -> Programmatic)
+1. In backend logs, simulate a Gemini outage (e.g. by temporarily clearing `GEMINI_API_KEY` in `.env`).
+2. Execute a file click.
+3. Verify the logs output: `Gemini explanation failed... Trying Groq fallback...`
+4. Verify the panel displays the fallback Groq-generated details successfully.
+
+---
+
 ## ✅ Day 4 End-of-Day Checklist
 
 Use this checklist to confirm the MVP is complete:
@@ -513,4 +567,21 @@ Use this checklist to confirm the MVP is complete:
 - [ ] Backend logs show which AI engine was used (Gemini / Groq / Programmatic)
 - [ ] `node ai/test-cases.js` passes all tests
 - [ ] `http://localhost:5000/health` returns status ok
+
+---
+
+## ✅ Day 5 End-of-Day Checklist
+
+Use this checklist to confirm the Day 5 task is fully complete:
+
+- [x] All sandbox files (`geminiService.js`, `groqService.js`, `llmService.js`, `server.js`) are updated with Day 5 capabilities.
+- [x] Clicking any folder/file node in the Explorer tree or canvas queries `/explain` correctly.
+- [x] Node Details Panel parses and displays file `purpose`, `inputs`, `outputs`, `dependencies`, and `role`.
+- [x] Tech Stack summary dynamically scans and prints detected technologies (Next.js, Express, MongoDB).
+- [x] Curved link paths are rendered on the canvas connecting active files with their dependencies.
+- [x] Export Map creates and downloads a PNG graphic of the dependency graph.
+- [x] `node ai/test-cases.js` executes and passes all test scenarios under both Gemini and Groq engines on port 3001.
+- [x] `.env` remains ignored by Git to preserve API keys.
+- [x] Root `.gitignore` ignores task doc and node_modules backup folders cleanly.
+
 

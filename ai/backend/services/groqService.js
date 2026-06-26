@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateFallbackResponse, validateArchitecture } from './geminiService.js';
+import { generateFallbackResponse, validateArchitecture, generateProgrammaticExplanation, generateProgrammaticReadme } from './geminiService.js';
 
 // Load environment variables
 dotenv.config();
@@ -223,4 +223,117 @@ if (isDirectRun) {
   }
 }
 
-export { DEFAULT_MODEL, testGroq, generateContent, analyzeRepository };
+/**
+ * Explains a single code file using Groq.
+ * @param {string} fileName - The name of the file (e.g. index.js).
+ * @param {string} fileContent - The text contents of the file.
+ * @param {string} [model] - The Groq model to use.
+ * @returns {Promise<Object>} The explanation JSON object.
+ */
+async function explainCodeFile(fileName, fileContent, model = DEFAULT_MODEL) {
+  if (!apiKey) {
+    return generateProgrammaticExplanation(fileName, fileContent);
+  }
+
+  const prompt = `Analyze the code file below and extract its architectural attributes.
+  
+File Name: ${fileName}
+Content:
+${fileContent}
+
+Respond STRICTLY with this JSON schema:
+{
+  "purpose": "1-2 sentences explaining what the file does",
+  "inputs": ["parameter1/import1", "parameter2/import2"],
+  "outputs": ["returnVal1/export1", "returnVal2/export2"],
+  "dependencies": ["dep1", "dep2"],
+  "role": "architectural role"
+}`;
+
+  try {
+    console.log(`⚡ GEMINI ANALYZER: Explaining file ${fileName} using Groq Llama fallback...`);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: 'You are a senior software architect. Respond ONLY with valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 1000,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim();
+    if (!text) throw new Error('Empty response from Groq API');
+
+    return JSON.parse(text);
+  } catch (error) {
+    console.warn(`Groq explain failed (${error.message}). Using programmatic fallback.`);
+    return generateProgrammaticExplanation(fileName, fileContent);
+  }
+}
+
+/**
+ * Generates README using Groq.
+ * @param {string} projectName - The name of the project.
+ * @param {Object} fileTree - The repository structure JSON tree.
+ * @param {string} [model] - The Groq model to use.
+ * @returns {Promise<string>} The generated README markdown text.
+ */
+async function generateReadmeFromTree(projectName, fileTree, model = DEFAULT_MODEL) {
+  if (!apiKey) {
+    return generateProgrammaticReadme(projectName, fileTree);
+  }
+
+  const prompt = `Generate a professional, comprehensive README.md file in markdown format for a project repository named "${projectName}".
+Below is the JSON file tree:
+${JSON.stringify(fileTree, null, 2)}
+
+Return ONLY raw markdown text. No explanations.`;
+
+  try {
+    console.log(`⚡ GEMINI ANALYZER: Generating README.md using Groq Llama...`);
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: 'system', content: 'You are a technical documentation assistant. Respond ONLY with markdown text.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 3000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Groq API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim();
+    if (!text) throw new Error('Empty response from Groq API');
+    return text.replace(/^```markdown\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+  } catch (error) {
+    console.warn(`Groq README failed. Using programmatic fallback. Error: ${error.message}`);
+    return generateProgrammaticReadme(projectName, fileTree);
+  }
+}
+
+export { DEFAULT_MODEL, testGroq, generateContent, analyzeRepository, explainCodeFile, generateReadmeFromTree };
