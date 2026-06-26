@@ -406,39 +406,42 @@ export default function DashboardPage() {
         </div>
         
         {architecture && architecture.summary && (
-          <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 overflow-y-auto max-h-40">
-            <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-2">
+          <div className="mt-4 shrink-0 overflow-y-auto max-h-[300px] relative overflow-hidden bg-[#1E1F22] text-white p-5 rounded-[24px] shadow-inner custom-scrollbar">
+            <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-[#FFD13B] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
+            <div className="absolute bottom-[-10px] left-[-10px] w-16 h-16 bg-[#FF7563] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
+            
+            <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-2 relative z-10">
               Project Summary
             </span>
-            <p className="text-xs font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50">
+            <p className="text-[11px] font-sans text-neutral-300 leading-relaxed relative z-10 mb-4">
               {architecture.summary}
             </p>
             {/* Metadata Badges */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-2 mb-3 relative z-10">
               {architecture.framework && architecture.framework !== 'None' && architecture.framework !== 'unknown' && (
-                <div className="bg-[#F0EDE4]/20 p-2 rounded-[12px] border border-[#E5E0D5]/30">
-                  <span className="text-[8px] font-bold tracking-wider text-neutral-400 uppercase block text-neutral-400">Framework</span>
-                  <span className="text-[10px] font-sans font-semibold text-neutral-700">{architecture.framework}</span>
+                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
+                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Framework</span>
+                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.framework}</span>
                 </div>
               )}
               {architecture.database && architecture.database !== 'None' && architecture.database !== 'unknown' && (
-                <div className="bg-[#F0EDE4]/20 p-2 rounded-[12px] border border-[#E5E0D5]/30">
-                  <span className="text-[8px] font-bold tracking-wider text-neutral-400 uppercase block text-neutral-400">Database</span>
-                  <span className="text-[10px] font-sans font-semibold text-neutral-700">{architecture.database}</span>
+                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
+                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Database</span>
+                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.database}</span>
                 </div>
               )}
               {architecture.authentication && architecture.authentication !== 'None' && architecture.authentication !== 'unknown' && (
-                <div className="bg-[#F0EDE4]/20 p-2 rounded-[12px] border border-[#E5E0D5]/30 col-span-2">
-                  <span className="text-[8px] font-bold tracking-wider text-neutral-400 uppercase block text-neutral-400">Authentication</span>
-                  <span className="text-[10px] font-sans font-semibold text-neutral-700">{architecture.authentication}</span>
+                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
+                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Authentication</span>
+                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.authentication}</span>
                 </div>
               )}
               {architecture.externalAPIs && architecture.externalAPIs.length > 0 && architecture.externalAPIs[0] !== 'None detected' && architecture.externalAPIs[0] !== 'None' && (
-                <div className="bg-[#F0EDE4]/20 p-2 rounded-[12px] border border-[#E5E0D5]/30 col-span-2">
-                  <span className="text-[8px] font-bold tracking-wider text-neutral-400 uppercase block text-neutral-400 mb-1">External APIs</span>
+                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
+                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1 opacity-80">External APIs</span>
                   <div className="flex flex-wrap gap-1">
                     {architecture.externalAPIs.map((api, idx) => (
-                      <span key={idx} className="text-[9px] font-sans font-semibold bg-[#E5E0D5]/40 text-neutral-700 px-1.5 py-0.5 rounded-[6px]">
+                      <span key={idx} className="text-[9px] font-sans font-semibold bg-white/10 text-white px-1.5 py-0.5 rounded-[6px]">
                         {api}
                       </span>
                     ))}
@@ -447,15 +450,15 @@ export default function DashboardPage() {
               )}
             </div>
             {architecture.techStack && architecture.techStack.length > 0 && (
-              <div>
-                <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-1.5">
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1.5 opacity-80">
                   Tech Stack
                 </span>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {architecture.techStack.map((tech, idx) => (
                     <span 
                       key={idx} 
-                      className="text-[9px] font-mono font-bold bg-[#1E1F22] text-white px-2 py-0.5 rounded-md"
+                      className="text-[9px] font-mono font-bold bg-white/10 text-white px-2.5 py-1 rounded-md"
                     >
                       {tech}
                     </span>
