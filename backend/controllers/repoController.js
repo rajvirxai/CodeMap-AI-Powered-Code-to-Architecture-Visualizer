@@ -37,13 +37,16 @@ const getHealth = (req, res) => {
  */
 const uploadRepo = (req, res) => {
   try {
+    console.log(`[API POST /upload] Started processing upload request.`);
     // Check if multer successfully captured a file
     if (!req.file) {
+      console.warn(`[API Warning] Upload failed: No file provided in request.`);
       return res.status(400).json({ error: 'No file uploaded. Please upload a ZIP file.' });
     }
 
     // Ensure the file is indeed a ZIP
     if (path.extname(req.file.originalname).toLowerCase() !== '.zip') {
+      console.warn(`[API Warning] Upload failed: Invalid file format (${req.file.originalname}).`);
       return res.status(400).json({ error: 'Invalid file format. Only ZIP files are supported.' });
     }
 
@@ -63,12 +66,13 @@ const uploadRepo = (req, res) => {
     zip.extractAllTo(extractPath, true);
 
     // Respond back with the unique folder ID that frontend can use to request analysis
+    console.log(`[API Success] File uploaded and extracted successfully. Folder ID: ${folderId}`);
     return res.status(200).json({
       message: 'File uploaded and extracted successfully',
       folderId: folderId
     });
   } catch (error) {
-    console.error('Error during file upload or extraction:', error);
+    console.error('[API Error /upload] Error during file upload or extraction:', error);
     return res.status(500).json({
       error: 'Failed to process the uploaded ZIP file',
       details: error.message
@@ -83,11 +87,13 @@ const uploadRepo = (req, res) => {
  */
 const analyzeRepo = async (req, res) => {
   try {
+    console.log(`[API POST /analyze] Started analyzing repo.`);
     const { folderId } = req.body;
 
-    // Validate that folderId was provided in the request
-    if (!folderId) {
-      return res.status(400).json({ error: 'Missing folderId in request body.' });
+    // Validate that folderId was provided in the request and is a string
+    if (!folderId || typeof folderId !== 'string') {
+      console.warn(`[API Warning] Analyze failed: Missing or invalid folderId.`);
+      return res.status(400).json({ error: 'Missing or invalid folderId in request body.' });
     }
 
     // Build the expected folder path
@@ -95,13 +101,16 @@ const analyzeRepo = async (req, res) => {
 
     // Verify that the folder actually exists
     if (!fs.existsSync(folderPath)) {
+      console.warn(`[API Warning] Analyze failed: Folder not found for ID ${folderId}.`);
       return res.status(404).json({ error: 'Folder not found. It may have been deleted or the upload expired.' });
     }
 
     // Scan the folder recursively and get the JSON tree structure
+    console.log(`[API Info] Scanning directory for folderId: ${folderId}`);
     // We pass 'project' (or the original project folder name) as the root node name
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
+    console.log(`[API Info] Scan complete. Beginning architecture analysis...`);
 
     // Analyze the repository structure using Gemini API
     const architecture = await analyzeArchitecture(repoTree);
@@ -124,12 +133,13 @@ const analyzeRepo = async (req, res) => {
 
     // Return the scanned tree and architecture analysis
     // Uses fileTree key to match the frontend expectations
+    console.log(`[API Success] Repository analysis completed successfully for: ${folderId}`);
     return res.status(200).json({
       fileTree: repoTree,
       architecture: architecture
     });
   } catch (error) {
-    console.error('Error during repository analysis:', error);
+    console.error('[API Error /analyze] Error during repository analysis:', error);
     return res.status(500).json({
       error: 'Failed to analyze the repository structure',
       details: error.message
@@ -143,10 +153,12 @@ const analyzeRepo = async (req, res) => {
  */
 const cloneRepo = async (req, res) => {
   try {
+    console.log(`[API POST /clone] Started cloning repository.`);
     const { repoUrl } = req.body;
 
-    if (!repoUrl) {
-      return res.status(400).json({ error: 'Missing repoUrl in request body.' });
+    if (!repoUrl || typeof repoUrl !== 'string') {
+      console.warn(`[API Warning] Clone failed: Missing or invalid repoUrl.`);
+      return res.status(400).json({ error: 'Missing or invalid repoUrl in request body.' });
     }
 
     // Sanitize GitHub browser URLs to extract the base clone URL.
@@ -186,15 +198,16 @@ const cloneRepo = async (req, res) => {
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
     // Run git clone command with depth 1 using the sanitized URL
-    console.log(`Cloning repository ${cleanRepoUrl} to ${extractPath}...`);
+    console.log(`[API Info] Cloning repository ${cleanRepoUrl} to ${extractPath}...`);
     await execPromise(`git clone --depth 1 "${cleanRepoUrl}" "${extractPath}"`);
 
+    console.log(`[API Success] Repository cloned successfully to folderId: ${folderId}`);
     return res.status(200).json({
       message: 'Repository cloned successfully',
       folderId: folderId
     });
   } catch (error) {
-    console.error('Error during repository cloning:', error);
+    console.error('[API Error /clone] Error during repository cloning:', error);
     return res.status(500).json({
       error: 'Failed to clone the git repository',
       details: error.message
@@ -208,10 +221,12 @@ const cloneRepo = async (req, res) => {
  */
 const explainFile = async (req, res) => {
   try {
+    console.log(`[API POST /explain] Started explaining file.`);
     const { folderId, filePath } = req.body;
 
-    if (!folderId || !filePath) {
-      return res.status(400).json({ error: 'Missing folderId or filePath in request body.' });
+    if (!folderId || typeof folderId !== 'string' || !filePath || typeof filePath !== 'string') {
+      console.warn(`[API Warning] Explain failed: Missing or invalid folderId or filePath.`);
+      return res.status(400).json({ error: 'Missing or invalid folderId or filePath in request body.' });
     }
 
     // Sanitize the path to prevent directory traversal
@@ -221,11 +236,13 @@ const explainFile = async (req, res) => {
     // Ensure the resolved path resides within the target extraction directory
     const expectedBase = path.join(__dirname, '../uploads/extracted', folderId);
     if (!absolutePath.startsWith(expectedBase)) {
-      return res.status(400).json({ error: 'Access denied: Path traversal detected.' });
+      console.warn(`[API Warning] Explain failed: Access denied (Path traversal detected) for ${filePath}.`);
+      return res.status(403).json({ error: 'Access denied: Path traversal detected.' });
     }
 
     // Verify file existence
     if (!fs.existsSync(absolutePath)) {
+      console.warn(`[API Warning] Explain failed: File not found - ${absolutePath}`);
       return res.status(404).json({ error: `File not found: ${filePath}` });
     }
 
@@ -257,11 +274,14 @@ const explainFile = async (req, res) => {
     const fileName = path.basename(filePath);
 
     // Call Gemini/Groq analyzer
+    console.log(`[API Info] Calling analyzer for file: ${fileName}`);
     const explanation = await explainCodeFile(fileName, fileContent);
+    
+    console.log(`[API Success] File explanation generated successfully for: ${fileName}`);
     return res.status(200).json(explanation);
 
   } catch (error) {
-    console.error('Error in explainFile controller:', error);
+    console.error('[API Error /explain] Error in explainFile controller:', error);
     return res.status(500).json({
       error: 'Failed to explain the code file',
       details: error.message
@@ -275,19 +295,23 @@ const explainFile = async (req, res) => {
  */
 const generateReadme = async (req, res) => {
   try {
+    console.log(`[API POST /generate-readme] Started generating README.`);
     const { folderId } = req.body;
 
-    if (!folderId) {
-      return res.status(400).json({ error: 'Missing folderId in request body.' });
+    if (!folderId || typeof folderId !== 'string') {
+      console.warn(`[API Warning] Generate README failed: Missing or invalid folderId.`);
+      return res.status(400).json({ error: 'Missing or invalid folderId in request body.' });
     }
 
     // Resolve target project path
     const folderPath = path.join(__dirname, '../uploads/extracted', folderId);
 
     if (!fs.existsSync(folderPath)) {
+      console.warn(`[API Warning] Generate README failed: Folder not found - ${folderId}`);
       return res.status(404).json({ error: 'Folder not found. It may have expired or was deleted.' });
     }
 
+    console.log(`[API Info] Scanning directory for README generation...`);
     // Scan the directory to get tree
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
@@ -295,12 +319,13 @@ const generateReadme = async (req, res) => {
     // Generate README content
     const readmeContent = await generateReadmeFromTree(folderDisplayName, repoTree);
 
+    console.log(`[API Success] README generated successfully for: ${folderId}`);
     return res.status(200).json({
       readme: readmeContent
     });
 
   } catch (error) {
-    console.error('Error in generateReadme controller:', error);
+    console.error('[API Error /generate-readme] Error in generateReadme controller:', error);
     return res.status(500).json({
       error: 'Failed to generate README.md content',
       details: error.message
