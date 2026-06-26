@@ -1,90 +1,73 @@
 import Link from 'next/link';
-import { Folder, GitBranch, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LandingPage() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-between p-6 md:p-12 max-w-4xl mx-auto w-full text-center">
-      {/* Spacer/Top Padding */}
-      <div className="h-4" />
-
-      {/* Main Content Area */}
-      <div className="flex flex-col items-center justify-center space-y-8 my-auto">
-        {/* Subtle decorative tag */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/50 text-xs font-medium text-zinc-400">
-          <Sparkles className="w-3.5 h-3.5 text-zinc-500 animate-pulse" />
+    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-[#F4F4F5] text-[#1E1F22] overflow-hidden font-sans">
+      
+      {/* Next-generation visualization tag - Pinned near top */}
+      <div className="absolute top-12 left-1/2 -translate-x-1/2 flex items-center justify-center z-50 w-full max-w-sm">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#1E1F22]/20 bg-white/50 backdrop-blur-sm text-xs font-medium text-[#1E1F22]/70 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FF6231] animate-pulse"></span>
           <span>Next-generation visualization</span>
         </div>
+      </div>
 
-        {/* Headline & Subheadline */}
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white font-sans max-w-2xl leading-tight">
-            Visualize Your <span className="text-zinc-400">Codebase</span> Instantly
+      {/* Top Navigation / Decorators */}
+      {/* (Decorators removed by request) */ }
+
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[400px] bg-[#FF6231] rounded-[100%] blur-[90px] opacity-80 mix-blend-multiply"></div>
+
+      {/* Orbit Ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        <svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-[spin_15s_linear_infinite]">
+          <ellipse cx="400" cy="300" rx="360" ry="170" transform="rotate(-20 400 300)" stroke="#1E1F22" strokeWidth="1.5" strokeOpacity="0.8"/>
+          {/* Star on the orbit */}
+          <path d="M93 385 L100 395 L110 402 L100 409 L93 419 L86 409 L76 402 L86 395 Z" fill="#1E1F22" transform="rotate(-20 93 402)" />
+        </svg>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center select-none mt-[-60px]">
+
+        <div className="flex flex-col items-center relative text-center">
+          <span className="text-sm md:text-lg tracking-[0.3em] font-medium text-[#1E1F22] mb-[-12px]">
+            VISUALIZE YOUR CODEBASE INSTANTLY
+          </span>
+          <h1 className="text-[100px] md:text-[150px] font-black tracking-tighter text-[#1E1F22] leading-none mix-blend-overlay">
+            CODEMAP
           </h1>
-          <p className="text-lg md:text-xl text-zinc-400 font-mono tracking-tight font-medium max-w-md mx-auto">
+          <span className="text-sm md:text-base tracking-[0.2em] font-bold text-[#1E1F22] mt-2 opacity-80 uppercase">
             AI-Powered Code-to-Architecture
-          </p>
+          </span>
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
+      {/* Call to Actions at the bottom */}
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-5 w-full px-6 z-20">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link 
             href="/upload" 
-            className="inline-flex items-center justify-center px-8 py-4 text-base font-bold font-mono tracking-wide text-black bg-white border-2 border-white rounded shadow-[4px_4px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_rgba(255,255,255,0.3)] hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-zinc-200 transition-all duration-200"
+            className="inline-flex items-center justify-center px-8 py-3.5 text-xs font-bold tracking-[0.15em] text-[#F4F4F5] bg-[#1E1F22] rounded-full hover:scale-105 transition-transform duration-200 uppercase shadow-xl"
           >
             Get Started
           </Link>
           <Link 
             href="/loading-state?folderId=mock-app" 
-            className="inline-flex items-center justify-center px-8 py-4 text-base font-bold font-mono tracking-wide text-white bg-zinc-900 border-2 border-zinc-800 rounded hover:bg-zinc-850 hover:border-zinc-700 transition-all duration-200"
+            className="inline-flex items-center justify-center px-8 py-3.5 text-xs font-bold tracking-[0.15em] text-[#1E1F22] border-2 border-[#1E1F22] rounded-full hover:bg-[#1E1F22]/5 transition-colors duration-200 uppercase"
           >
             Try Demo Mode
           </Link>
         </div>
-        <div className="pt-2">
-          <a 
-            href="/demo-project.zip" 
-            download
-            className="text-xs font-mono text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
-          >
-            Download Demo Codebase ZIP
-          </a>
-        </div>
+        <a 
+          href="/demo-project.zip" 
+          download
+          className="text-[10px] font-mono tracking-widest text-[#1E1F22]/50 hover:text-[#1E1F22] transition-colors uppercase"
+        >
+          Download Demo Codebase ZIP
+        </a>
       </div>
-
-      {/* Graphic Footer: Abstract visual dashed boundary box showing workflow */}
-      <div className="w-full max-w-lg mt-12">
-        <div className="border border-dashed border-zinc-800 bg-zinc-950/40 rounded-xl p-8 flex items-center justify-around relative overflow-hidden group shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          {/* Subtle grid background pattern */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20" />
-
-          {/* Folder Node */}
-          <div className="flex flex-col items-center gap-2 z-10 group-hover:scale-105 transition-transform duration-300">
-            <div className="w-16 h-16 rounded-lg border border-zinc-700 bg-zinc-900 flex items-center justify-center shadow-lg shadow-black/40">
-              <Folder className="w-8 h-8 text-zinc-300" />
-            </div>
-            <span className="text-xs font-mono text-zinc-500">Source ZIP</span>
-          </div>
-
-          {/* Connection / Flow Arrow */}
-          <div className="flex flex-col items-center gap-1 z-10 flex-1 px-4 max-w-[150px]">
-            <span className="text-[10px] font-mono text-zinc-500 tracking-wider uppercase animate-pulse">
-              AI Analysis
-            </span>
-            <div className="w-full flex items-center justify-center relative">
-              <div className="w-full h-[1px] bg-dashed border-t border-dashed border-zinc-700" />
-              <ArrowRight className="w-4 h-4 text-zinc-400 absolute right-0" />
-            </div>
-          </div>
-
-          {/* Network Graph Node */}
-          <div className="flex flex-col items-center gap-2 z-10 group-hover:scale-105 transition-transform duration-300">
-            <div className="w-16 h-16 rounded-lg border border-zinc-700 bg-zinc-900 flex items-center justify-center shadow-lg shadow-black/40">
-              <GitBranch className="w-8 h-8 text-zinc-100 rotate-90" />
-            </div>
-            <span className="text-xs font-mono text-zinc-500">Architecture</span>
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 }
