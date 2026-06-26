@@ -11,7 +11,8 @@ import {
   ZoomOut, 
   Maximize2,
   RefreshCw,
-  Info
+  Info,
+  Menu
 } from 'lucide-react';
 import { NodeDetailsPanel } from '@/components/NodeDetailsPanel';
 
@@ -43,6 +44,14 @@ export default function DashboardPage() {
   const [activeFile, setActiveFile] = useState<string>('index.js');
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Close sidebar by default on smaller screens
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
 
   // Retrieve cached repository tree from loading stage
   useEffect(() => {
@@ -121,7 +130,7 @@ export default function DashboardPage() {
 
   // Managing states for tracking clicked nodes, loading indicators, and API status
   const [selectedNode, setSelectedNode] = useState<any | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
+  const [isPanelOpen, setIsPanelOpen] = useState<boolean>(true);
   const [isAIAnalyzing, setIsAIAnalyzing] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -350,14 +359,31 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#F0EDE4] text-[#1E1F22] flex font-sans overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] w-full bg-[#F0EDE4] text-[#1E1F22] flex font-sans overflow-hidden p-4 gap-4">
       
-      <aside className="w-72 bg-white m-4 mr-0 rounded-[28px] border border-[#E5E0D5]/60 shadow-sm p-5 flex flex-col shrink-0 select-none">
+      {/* Backdrop overlay for Mobile Sidebar */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-[#1E1F22]/20 backdrop-blur-xs z-30 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Explorer Sidebar */}
+      <aside 
+        className={`bg-white rounded-[24px] border border-[#E5E0D5] p-5 flex flex-col shrink-0 select-none transition-all duration-300 ease-in-out z-40
+          /* Desktop layout: toggle width */
+          lg:flex lg:relative lg:inset-auto lg:h-full ${isSidebarOpen ? 'w-72 opacity-100' : 'w-0 p-0 border-0 opacity-0 pointer-events-none'}
+          /* Mobile layout: floating drawer */
+          fixed inset-y-4 left-4 h-[calc(100vh-6rem)] w-72 shadow-lg
+          ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-80 opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100'}
+        `}
+      >
         <div className="flex items-center justify-between mb-4 shrink-0">
-          <span className="text-xs font-bold tracking-wider text-neutral-400 uppercase">
+          <span className="text-sm font-bold tracking-wider text-neutral-400 uppercase">
             Explorer
           </span>
-          <span className="text-[10px] font-bold bg-[#F0EDE4] text-[#1E1F22] px-2 py-0.5 rounded-full border border-[#E5E0D5]">
+          <span className="text-[10px] font-bold bg-[#F0EDE4] text-[#1E1F22] px-2.5 py-1 rounded-full border border-[#E5E0D5]">
             LOCAL
           </span>
         </div>
@@ -379,7 +405,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase block mb-2">
               Project Summary
             </span>
-            <p className="text-[11px] font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50">
+            <p className="text-xs font-sans text-neutral-600 leading-relaxed bg-[#F0EDE4]/30 p-3 rounded-[16px] border border-[#E5E0D5]/50">
               {architecture.summary}
             </p>
           </div>
@@ -393,24 +419,35 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      <main className="flex-1 p-6 flex flex-col justify-between overflow-hidden relative">
+      {/* Main Canvas Area */}
+      <main className="flex-1 flex flex-col justify-between overflow-hidden relative min-w-0 h-full gap-4">
         
-        <div className="flex justify-between items-center bg-white/80 backdrop-blur-md px-6 py-4 rounded-[24px] border border-white/80 shadow-sm mb-4 shrink-0 z-10">
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-[#1E1F22]">CodeMap Workspace</h1>
-            <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">System Flow Visualizer Canvas</p>
+        {/* Canvas Header */}
+        <div className="flex justify-between items-center bg-white px-6 py-4 rounded-[24px] border border-[#E5E0D5] shadow-sm shrink-0 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 hover:bg-[#F0EDE4] rounded-xl text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
+              title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-[#1E1F22]">CodeMap Workspace</h1>
+              <p className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">System Flow Visualizer Canvas</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="font-mono text-xs font-bold text-neutral-400">Active View:</span>
-            <span className="font-mono text-xs font-bold bg-[#1E1F22] text-white border border-[#1E1F22] px-3.5 py-1.5 rounded-full shadow-inner">
+            <span className="font-mono text-xs font-bold text-neutral-400 hidden sm:inline">Active View:</span>
+            <span className="font-mono text-xs font-bold bg-[#1E1F22] text-white border border-[#1E1F22] px-3.5 py-1.5 rounded-full shadow-inner truncate max-w-[180px]">
               {activeFile}
             </span>
             
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-[#E5E0D5] hover:border-[#D2CBB8] text-xs font-bold tracking-wide rounded-full shadow-sm hover:shadow transition-all disabled:opacity-50 text-[#1E1F22]"
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-[#E5E0D5] hover:border-[#D2CBB8] text-xs font-bold tracking-wide rounded-full shadow-sm hover:shadow transition-all disabled:opacity-50 text-[#1E1F22] cursor-pointer"
             >
               {isExporting ? (
                 <>
@@ -420,14 +457,15 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <Download className="w-3.5 h-3.5" />
-                  <span>Export Map</span>
+                  <span className="hidden sm:inline">Export Map</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto relative bg-[#FCFBF9] border border-[#E5E0D5] rounded-[32px] shadow-sm flex items-center justify-center p-8">
+        {/* Canvas Body */}
+        <div className="flex-1 overflow-auto relative bg-[#FCFBF9] border border-[#E5E0D5] rounded-[24px] shadow-sm flex items-center justify-center p-4 min-h-0 custom-scrollbar">
           
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#E5E0D5_1px,transparent_1px),linear-gradient(to_bottom,#E5E0D5_1px,transparent_1px)] bg-[size:2.5rem_2.5rem] opacity-35 pointer-events-none" />
 
@@ -444,7 +482,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <div className="flex flex-col items-center">
-                  <div className="border border-[#E5E0D5] bg-white px-6 py-3.5 rounded-[20px] shadow-sm min-w-[150px] text-center">
+                  <div className="border border-[#E5E0D5] bg-white px-6 py-3.5 rounded-[16px] shadow-sm min-w-[150px] text-center">
                     <span className="text-[10px] font-bold text-neutral-400 block uppercase tracking-wider mb-0.5">Entry Point</span>
                     <span className="font-mono font-bold text-xs text-[#1E1F22]">{activeFile}</span>
                   </div>
@@ -480,7 +518,7 @@ export default function DashboardPage() {
 
                             <div 
                               onClick={() => handleNodeClick({ id: module.name, type: module.type })}
-                              className="border border-[#E5E0D5] bg-white px-5 py-4 rounded-[20px] text-center w-[160px] shadow-sm hover:shadow hover:border-[#D2CBB8] transition-all cursor-pointer active:scale-95 flex flex-col items-center"
+                              className="border border-[#E5E0D5] bg-white px-5 py-4 rounded-[16px] text-center w-[160px] shadow-sm hover:shadow hover:border-[#D2CBB8] transition-all cursor-pointer active:scale-95 flex flex-col items-center"
                             >
                               <span className={`text-[9px] font-bold ${colorClass} border px-2.5 py-0.5 rounded-full block uppercase tracking-wider mb-2`}>
                                 {module.type}
@@ -500,7 +538,7 @@ export default function DashboardPage() {
                                   {module.children.map((childName, cIdx) => (
                                     <div 
                                       key={cIdx} 
-                                      className="border border-[#E5E0D5] bg-white/80 hover:bg-white px-4 py-2.5 rounded-[16px] text-center w-[140px] shadow-sm hover:border-[#D2CBB8] transition-all cursor-pointer active:scale-95"
+                                      className="border border-[#E5E0D5] bg-white/80 hover:bg-white px-4 py-2.5 rounded-[12px] text-center w-[140px] shadow-sm hover:border-[#D2CBB8] transition-all cursor-pointer active:scale-95"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleCanvasNodeClick(childName, "Code File");
@@ -525,11 +563,45 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-10 right-10 flex items-center gap-1.5 p-1.5 bg-white border border-[#E5E0D5] rounded-[20px] shadow-md z-20">
+        {/* Floating Legend Panel */}
+        <div className="absolute bottom-6 left-6 bg-white border border-[#E5E0D5] p-3.5 rounded-[16px] shadow-md z-20 flex flex-col gap-2 min-w-[140px] select-none">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block border-b border-[#F0EDE4] pb-1 mb-0.5">
+            Legend
+          </span>
+          <div className="flex flex-col gap-1.5 text-[10px] font-sans">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+              <span className="text-neutral-600 font-medium">Route / Router</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span className="text-neutral-600 font-medium">Controller</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-neutral-600 font-medium">Component</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-neutral-600 font-medium">Utility / Helper</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+              <span className="text-neutral-600 font-medium">Database / Model</span>
+            </div>
+            <div className="flex items-center gap-2 border-t border-[#F0EDE4] pt-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-neutral-200 border border-neutral-300 shrink-0" />
+              <span className="text-neutral-500 font-medium">Active Code File</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Zoom Controls */}
+        <div className="absolute bottom-6 right-6 flex items-center gap-1.5 p-1.5 bg-white border border-[#E5E0D5] rounded-[16px] shadow-md z-20">
           <button 
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all"
+            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -537,7 +609,7 @@ export default function DashboardPage() {
           <button 
             onClick={handleZoomReset}
             title="Reset Zoom"
-            className="px-2.5 py-1.5 hover:bg-[#F0EDE4] rounded-full text-[10px] font-mono text-neutral-500 hover:text-[#1E1F22] transition-all"
+            className="px-2.5 py-1.5 hover:bg-[#F0EDE4] rounded-full text-[10px] font-mono text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
           >
             {Math.round(zoomScale * 100)}%
           </button>
@@ -545,7 +617,7 @@ export default function DashboardPage() {
           <button 
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all"
+            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -555,7 +627,7 @@ export default function DashboardPage() {
           <button 
             onClick={handleZoomReset}
             title="Fit to screen"
-            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all"
+            className="p-2 border border-transparent hover:bg-[#F0EDE4] rounded-full text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -569,6 +641,8 @@ export default function DashboardPage() {
         onClose={() => setIsPanelOpen(false)}
         isLoading={isAIAnalyzing}
         error={apiError}
+        architecture={architecture}
+        projectName={treeData?.name || 'Project'}
       />
     </div>
   );
@@ -660,12 +734,22 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
     leftItemRefs.current = [];
     rightItemRefs.current = [];
 
+    if (!containerRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      updateConnections();
+    });
+    observer.observe(containerRef.current);
+
     updateConnections();
     const timer = setTimeout(updateConnections, 100);
-    
+    const timer2 = setTimeout(updateConnections, 350); // After sidebar animation completes
+
     window.addEventListener('resize', updateConnections);
     return () => {
+      observer.disconnect();
       clearTimeout(timer);
+      clearTimeout(timer2);
       window.removeEventListener('resize', updateConnections);
     };
   }, [leftNodes, rightNodes, fileName]);
@@ -673,7 +757,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="flex items-center justify-between gap-12 w-full max-w-5xl relative min-h-[450px] px-8 py-10 bg-white/40 border border-[#D2CBB8] rounded-[32px] shadow-inner"
+      className="flex items-center justify-between gap-12 w-full max-w-5xl relative min-h-[450px] px-8 py-10 bg-white/40 border border-[#E5E0D5] rounded-[24px] shadow-inner"
     >
       <style>{`
         .dash-line {
@@ -705,7 +789,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
               key={idx}
               ref={(el) => { if (el) leftItemRefs.current[idx] = el; }}
               onClick={() => onNodeClick(item, "Imported File")}
-              className="bg-white hover:bg-[#FCFBF9] text-[#1E1F22] px-4 py-3 rounded-[20px] border border-[#E5E0D5] hover:border-[#D2CBB8] shadow-sm hover:shadow transition-all duration-200 cursor-pointer text-xs font-mono truncate hover:translate-x-1"
+              className="bg-white hover:bg-[#FCFBF9] text-[#1E1F22] px-4 py-3 rounded-[12px] border border-[#E5E0D5] hover:border-[#D2CBB8] shadow-sm hover:shadow transition-all duration-200 cursor-pointer text-xs font-mono truncate hover:translate-x-1"
               title={item}
             >
               <div className="flex items-center gap-2">
@@ -715,7 +799,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
             </div>
           ))
         ) : (
-          <div className="text-xs text-neutral-400 italic pl-2 bg-[#F0EDE4]/20 py-4 rounded-[20px] border border-[#E5E0D5]/50 text-center">
+          <div className="text-xs text-neutral-400 italic pl-2 bg-[#F0EDE4]/20 py-4 rounded-[12px] border border-[#E5E0D5]/50 text-center">
             No imports detected
           </div>
         )}
@@ -724,7 +808,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
       <div 
         ref={centerRef}
         onClick={() => onNodeClick(fileName, "Active File")}
-        className="relative overflow-hidden bg-white text-[#1E1F22] p-7 rounded-[28px] border-2 border-[#1E1F22] shadow-[0_12px_40px_rgba(30,31,34,0.08)] min-w-[220px] text-center hover:scale-105 transition-all duration-300 cursor-pointer z-10 shrink-0"
+        className="relative overflow-hidden bg-white text-[#1E1F22] p-7 rounded-[16px] border-2 border-[#1E1F22] shadow-[0_12px_40px_rgba(30,31,34,0.08)] min-w-[220px] text-center hover:scale-105 transition-all duration-300 cursor-pointer z-10 shrink-0"
       >
         <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-[#FFD13B]/20 rounded-full filter blur-xl"></div>
         <div className="absolute bottom-[-20px] left-[-20px] w-24 h-24 bg-[#FF7563]/20 rounded-full filter blur-xl"></div>
@@ -746,7 +830,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
               key={idx}
               ref={(el) => { if (el) rightItemRefs.current[idx] = el; }}
               onClick={() => onNodeClick(item, "Exported Entity")}
-              className="bg-white hover:bg-[#FCFBF9] text-[#1E1F22] px-4 py-3 rounded-[20px] border border-[#E5E0D5] hover:border-[#D2CBB8] shadow-sm hover:shadow transition-all duration-200 cursor-pointer text-xs font-mono truncate hover:-translate-x-1"
+              className="bg-white hover:bg-[#FCFBF9] text-[#1E1F22] px-4 py-3 rounded-[12px] border border-[#E5E0D5] hover:border-[#D2CBB8] shadow-sm hover:shadow transition-all duration-200 cursor-pointer text-xs font-mono truncate hover:-translate-x-1"
               title={item}
             >
               <div className="flex items-center gap-2">
@@ -756,7 +840,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
             </div>
           ))
         ) : (
-          <div className="text-xs text-neutral-400 italic pl-2 bg-[#F0EDE4]/20 py-4 rounded-[20px] border border-[#E5E0D5]/50 text-center">
+          <div className="text-xs text-neutral-400 italic pl-2 bg-[#F0EDE4]/20 py-4 rounded-[12px] border border-[#E5E0D5]/50 text-center">
             No exports detected
           </div>
         )}
