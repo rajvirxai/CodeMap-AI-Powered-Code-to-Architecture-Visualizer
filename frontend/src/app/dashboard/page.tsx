@@ -139,6 +139,67 @@ export default function DashboardPage() {
   const [isAIAnalyzing, setIsAIAnalyzing] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // Legend drag-and-drop state
+  const [legendPos, setLegendPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleLegendMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - legendPos.x,
+      y: e.clientY - legendPos.y
+    });
+    e.preventDefault();
+  };
+
+  const handleLegendTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStart({
+      x: touch.clientX - legendPos.x,
+      y: touch.clientY - legendPos.y
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setLegendPos({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      setLegendPos({
+        x: touch.clientX - dragStart.x,
+        y: touch.clientY - dragStart.y
+      });
+    };
+
+    const handleDragEnd = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleDragEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, dragStart]);
+
   // Search tree recursively to find active file node
   const activeFileNode = useMemo(() => {
     if (!treeData) return null;
@@ -622,11 +683,24 @@ export default function DashboardPage() {
         </div>
 
         {/* Floating Legend Panel */}
-        <div className="absolute bottom-6 left-6 bg-white border border-[#E5E0D5] p-3.5 rounded-[16px] shadow-md z-20 flex flex-col gap-2 min-w-[140px] select-none">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block border-b border-[#F0EDE4] pb-1 mb-0.5">
+        <div 
+          onMouseDown={handleLegendMouseDown}
+          onTouchStart={handleLegendTouchStart}
+          style={{
+            transform: `translate(${legendPos.x}px, ${legendPos.y}px)`,
+            touchAction: 'none'
+          }}
+          className={`absolute bottom-6 left-6 bg-white/90 backdrop-blur-md border border-[#E5E0D5] p-3.5 rounded-[16px] shadow-md z-20 flex flex-col gap-2 min-w-[140px] select-none transition-shadow duration-150
+            ${isDragging ? 'cursor-grabbing shadow-lg border-neutral-300' : 'cursor-grab hover:shadow-md'}
+          `}
+        >
+          {/* Grab Bar Handle */}
+          <div className="w-8 h-1 bg-neutral-200 rounded-full mx-auto mb-1 opacity-60 pointer-events-none" />
+          
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block border-b border-[#F0EDE4] pb-1 mb-0.5 pointer-events-none">
             Legend
           </span>
-          <div className="flex flex-col gap-1.5 text-[10px] font-sans">
+          <div className="flex flex-col gap-1.5 text-[10px] font-sans pointer-events-none">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
               <span className="text-neutral-600 font-medium">Route / Router</span>
