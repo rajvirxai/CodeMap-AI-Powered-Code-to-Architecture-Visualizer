@@ -393,87 +393,87 @@ export default function DashboardPage() {
           </span>
         </div>
         
-        <div className="flex-1 overflow-y-auto mt-2 pr-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto mt-2 pr-1 pb-4 custom-scrollbar">
           {treeData ? (
-            <div className="space-y-1">
+            <div className="space-y-1 min-h-[50vh]">
               <DirectoryNode node={treeData} depth={0} />
             </div>
           ) : (
-            <div className="p-4 text-center text-xs font-mono text-neutral-400 animate-pulse">
+            <div className="p-4 text-center text-xs font-mono text-neutral-400 animate-pulse min-h-[50vh]">
               Loading repository...
             </div>
           )}
-        </div>
-        
-        {architecture && architecture.summary && (
-          <div className="mt-4 shrink-0 overflow-y-auto max-h-[300px] relative overflow-hidden bg-[#1E1F22] text-white p-5 rounded-[24px] shadow-inner custom-scrollbar">
-            <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-[#FFD13B] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
-            <div className="absolute bottom-[-10px] left-[-10px] w-16 h-16 bg-[#FF7563] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
-            
-            <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-2 relative z-10">
-              Project Summary
-            </span>
-            <p className="text-[11px] font-sans text-neutral-300 leading-relaxed relative z-10 mb-4">
-              {architecture.summary}
-            </p>
-            {/* Metadata Badges */}
-            <div className="grid grid-cols-2 gap-2 mb-3 relative z-10">
-              {architecture.framework && architecture.framework !== 'None' && architecture.framework !== 'unknown' && (
-                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
-                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Framework</span>
-                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.framework}</span>
-                </div>
-              )}
-              {architecture.database && architecture.database !== 'None' && architecture.database !== 'unknown' && (
-                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
-                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Database</span>
-                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.database}</span>
-                </div>
-              )}
-              {architecture.authentication && architecture.authentication !== 'None' && architecture.authentication !== 'unknown' && (
-                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
-                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Authentication</span>
-                  <span className="text-[10px] font-sans font-semibold text-white">{architecture.authentication}</span>
-                </div>
-              )}
-              {architecture.externalAPIs && architecture.externalAPIs.length > 0 && architecture.externalAPIs[0] !== 'None detected' && architecture.externalAPIs[0] !== 'None' && (
-                <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
-                  <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1 opacity-80">External APIs</span>
-                  <div className="flex flex-wrap gap-1">
-                    {architecture.externalAPIs.map((api, idx) => (
-                      <span key={idx} className="text-[9px] font-sans font-semibold bg-white/10 text-white px-1.5 py-0.5 rounded-[6px]">
-                        {api}
+          
+          {architecture && architecture.summary && (
+            <div className="mt-8 relative overflow-hidden bg-[#1E1F22] text-white p-5 rounded-[24px] shadow-inner">
+              <div className="absolute top-[-20px] right-[-20px] w-24 h-24 bg-[#FFD13B] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
+              <div className="absolute bottom-[-10px] left-[-10px] w-16 h-16 bg-[#FF7563] rounded-full filter blur-xl opacity-20 pointer-events-none"></div>
+              
+              <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-2 relative z-10">
+                Project Summary
+              </span>
+              <p className="text-[11px] font-sans text-neutral-300 leading-relaxed relative z-10 mb-4">
+                {architecture.summary}
+              </p>
+              {/* Metadata Badges */}
+              <div className="grid grid-cols-2 gap-2 mb-3 relative z-10">
+                {architecture.framework && architecture.framework !== 'None' && architecture.framework !== 'unknown' && (
+                  <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
+                    <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Framework</span>
+                    <span className="text-[10px] font-sans font-semibold text-white">{architecture.framework}</span>
+                  </div>
+                )}
+                {architecture.database && architecture.database !== 'None' && architecture.database !== 'unknown' && (
+                  <div className="bg-white/5 p-2 rounded-[12px] border border-white/10">
+                    <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Database</span>
+                    <span className="text-[10px] font-sans font-semibold text-white">{architecture.database}</span>
+                  </div>
+                )}
+                {architecture.authentication && architecture.authentication !== 'None' && architecture.authentication !== 'unknown' && (
+                  <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
+                    <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block opacity-80">Authentication</span>
+                    <span className="text-[10px] font-sans font-semibold text-white">{architecture.authentication}</span>
+                  </div>
+                )}
+                {architecture.externalAPIs && architecture.externalAPIs.length > 0 && architecture.externalAPIs[0] !== 'None detected' && architecture.externalAPIs[0] !== 'None' && (
+                  <div className="bg-white/5 p-2 rounded-[12px] border border-white/10 col-span-2">
+                    <span className="text-[8px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1 opacity-80">External APIs</span>
+                    <div className="flex flex-wrap gap-1">
+                      {architecture.externalAPIs.map((api, idx) => (
+                        <span key={idx} className="text-[9px] font-sans font-semibold bg-white/10 text-white px-1.5 py-0.5 rounded-[6px]">
+                          {api}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {architecture.techStack && architecture.techStack.length > 0 && (
+                <div className="relative z-10">
+                  <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1.5 opacity-80">
+                    Tech Stack
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {architecture.techStack.map((tech, idx) => (
+                      <span 
+                        key={idx} 
+                        className="text-[9px] font-mono font-bold bg-white/10 text-white px-2.5 py-1 rounded-md"
+                      >
+                        {tech}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            {architecture.techStack && architecture.techStack.length > 0 && (
-              <div className="relative z-10">
-                <span className="text-[10px] font-bold tracking-wider text-[#FFD13B] uppercase block mb-1.5 opacity-80">
-                  Tech Stack
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {architecture.techStack.map((tech, idx) => (
-                    <span 
-                      key={idx} 
-                      className="text-[9px] font-mono font-bold bg-white/10 text-white px-2.5 py-1 rounded-md"
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
 
-        <div className="mt-4 pt-4 border-t border-[#F0EDE4] shrink-0 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
-          <p className="text-[10px] font-mono text-neutral-400 leading-normal">
-            Click on file nodes to display dependency architecture canvas.
-          </p>
+          <div className="mt-4 pt-4 border-t border-[#F0EDE4] flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+            <p className="text-[10px] font-mono text-neutral-400 leading-normal">
+              Click on file nodes to display dependency architecture canvas.
+            </p>
+          </div>
         </div>
       </aside>
 
