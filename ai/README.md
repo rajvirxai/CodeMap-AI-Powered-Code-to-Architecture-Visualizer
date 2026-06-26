@@ -4,7 +4,7 @@ CodeMap automatically analyzes directory structures and file dependencies, gener
 
 ---
 
-## 📅 Chronological Development Roadmap (Day 1 - Day 5)
+## 📅 Chronological Development Roadmap (Day 1 - Day 6)
 
 ### 📁 Day 1: AI API Integration & Backend Setup
 * **Goal**: Establish a baseline Node.js + Express backend integrated with the Gemini API.
@@ -126,6 +126,33 @@ The AI Team delivered additional features beyond the baseline success criteria:
 **Day 5 criteria: 6/6 ✅ — Fully satisfied.**
 
 ### 🤖 Day 6: Prompt Optimization, Target Metadata Detection, & Multi-Repo Verification
+
+#### 📋 Day 6 Task - AI Team & Team Collaborative Goals
+
+Here are the target guidelines and objectives assigned for Day 6:
+
+##### **AI Team Tasks**
+* **Improve prompt quality** for better architecture understanding.
+* **Detect target metadata fields**:
+  * Entry point
+  * Framework
+  * Database
+  * External APIs
+  * Authentication
+* **Generate a concise architecture summary**.
+* **Test on at least 5 different GitHub repositories**.
+
+##### **Team Collaboration**
+Everyone will work together to:
+* Fix UI and backend bugs.
+* Improve integration between frontend, backend, and AI.
+* Test the complete application using multiple repositories.
+* Review each other's code and resolve merge conflicts.
+
+##### **End-of-Day Goal**
+* By the end of Day 6, the application should work flawlessly.
+
+#### 🛠️ Day 6 Implementation Overview
 * **Goal**: Enhance LLM prompt quality to extract key workspace traits (Framework, Database, Auth, External APIs, and Entry Point), implement structural schemas, build heuristic fallbacks, and render visual badges on the Next.js visualizer side panel.
 * **Tasks**:
   * **System Prompt Optimization**: Upgraded system instructions and output guidelines to request structured architecture metadata under Gemini & Groq.
@@ -438,7 +465,7 @@ node ai/server.js
 
 ---
 
-## 🧪 Day-by-Day Testing Guide (Day 1 → Day 4)
+## 🧪 Day-by-Day Testing Guide (Day 1 → Day 6)
 
 ### ✅ Day 1 Test — API Connectivity
 
