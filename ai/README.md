@@ -125,6 +125,27 @@ The AI Team delivered additional features beyond the baseline success criteria:
 
 **Day 5 criteria: 6/6 ✅ — Fully satisfied.**
 
+### 🤖 Day 6: Prompt Optimization, Target Metadata Detection, & Multi-Repo Verification
+* **Goal**: Enhance LLM prompt quality to extract key workspace traits (Framework, Database, Auth, External APIs, and Entry Point), implement structural schemas, build heuristic fallbacks, and render visual badges on the Next.js visualizer side panel.
+* **Tasks**:
+  * **System Prompt Optimization**: Upgraded system instructions and output guidelines to request structured architecture metadata under Gemini & Groq.
+  * **Metadata Extraction**: Extracted and separated five crucial architectural attributes: Entry Point, Framework, Database, External APIs, and Authentication.
+  * **Concise Project Summaries**: Instructed the models to generate natural, codebase-specific project summaries under 100 words.
+  * **Frontend UI Enhancements**: Expanded Next.js interfaces and rendered custom card layouts and tag clouds for metadata properties on the dashboard.
+  * **Multi-Repo Verification**: Created a programmatic verification suite to test the pipeline across 5 different repository architectures.
+
+#### ✅ Day 6 Criteria — Full Verification (AI Team, Team 3)
+
+| # | Success Criteria | Status | How It's Done |
+|---|---|---|---|
+| 1 | **Improve prompt quality** | ✅ Done | Expanded prompts and configured strict schema-validated JSON outputs. |
+| 2 | **Detect 5 target metadata fields** | ✅ Done | Exposes `entryPoint`, `framework`, `database`, `externalAPIs`, and `authentication` from the analysis. |
+| 3 | **Generate concise project summaries** | ✅ Done | Generates highly readable 2-3 sentence summaries under 100 words. |
+| 4 | **Test 5 different repos** | ✅ Done | Verified the pipeline against Express, Next.js, Django, React, and Spring Boot models. |
+| 5 | **Render metadata badges in UI** | ✅ Done | Sidebar displays framework, database, auth, and external APIs badges. |
+
+**Day 6 criteria: 5/5 ✅ — Fully satisfied.**
+
 ---
 
 ## 👥 Team Collaboration Model
@@ -583,5 +604,145 @@ Use this checklist to confirm the Day 5 task is fully complete:
 - [x] `node ai/test-cases.js` executes and passes all test scenarios under both Gemini and Groq engines on port 3001.
 - [x] `.env` remains ignored by Git to preserve API keys.
 - [x] Root `.gitignore` ignores task doc and node_modules backup folders cleanly.
+
+---
+
+### ✅ Day 6 Test — Prompts Optimization, 5-Field Detection & Sidebar Badges
+
+This verifies that the Day 6 tasks are fully complete:
+
+#### Test A: Programmatic Verification Suite
+1. Run the test suite:
+   ```bash
+   node ai/test-5-repos.js
+   ```
+   **Expected**: Command completes successfully and outputs exact metadata fields (Framework, Database, Authentication, External APIs, Entry Point) and summaries for all 5 tested repository models.
+
+#### Test B: Integrated UI Check
+1. Start the integrated dev server:
+   ```bash
+   npm run dev
+   ```
+2. Open the browser and visit `http://localhost:3000/upload`.
+3. Upload or clone any code repository (e.g. standard Node.js/Mongoose REST API).
+4. Verify that:
+   * ✅ **SIDEBAR** shows the concise **Project Summary** paragraph.
+   * ✅ **SIDEBAR** displays **Framework** and **Database** metadata cards.
+   * ✅ **SIDEBAR** displays **Authentication** details.
+   * ✅ **SIDEBAR** displays **External APIs** as tags.
+
+---
+
+## 📈 Day 6 Step-by-Step Workflow
+
+We followed this step-by-step workflow during the Day 6 implementation:
+
+1. **Schema & Prompts Definition**: Updated the `analyzeRepository` instructions and output schema under Gemini (`geminiService.js`) and Groq (`groqService.js`) to extract the 5 target fields.
+2. **Programmatic Fallbacks**: Enhanced local parser code (`generateFallbackResponse`) to extract frameworks, databases, auth systems, and external APIs programmatically via regex file scanners if LLM engines are throttled.
+3. **Analyzer Sync**: Copied prompts and fallback routines to the production `backend/utils/geminiAnalyzer.js` engine.
+4. **Integration Verification**: Ran `test-cases.js` to ensure the Express endpoints on port `3001` parse the expanded schemas correctly.
+5. **Multi-Repo Test Script**: Created and executed `test-5-repos.js` simulating 5 repository formats.
+6. **Frontend UI Rendering**: Updated Next.js `page.tsx` interfaces and rendered responsive cards and tag clouds for metadata on the visualizer sidebar.
+
+---
+
+## 📊 Verification Test Results
+
+Below are the console results from running the test script `node ai/test-5-repos.js`:
+
+```text
+=======================================================
+🚀 STARTING MULTI-REPO VERIFICATION (5 CODESPACE SCENARIOS)
+=======================================================
+
+-------------------------------------------------------
+Testing: Repo 1: Node.js/Express + MongoDB REST API
+-------------------------------------------------------
+✅ Success! Metadata Detected:
+   - 🚀 Summary: This is an Express.js-based REST API designed for user management, interacting with a MongoDB database. It features distinct architectural layers for routing, controllers, data modeling, and authentication middleware. The application provides a clear separation of concerns for robust backend development.
+   - 📌 Entry Point: server.js
+   - 💻 Framework: Express.js
+   - 💾 Database: MongoDB
+   - 🔒 Authentication: JWT
+   - 🌐 External APIs: []
+   - 🛠️ Tech Stack: [Node.js, Express.js, MongoDB, Mongoose]
+   - 📁 Modules Count: 5
+   - 🔵 Nodes Count: 3
+   - 🔗 Edges Count: 3
+
+-------------------------------------------------------
+Testing: Repo 2: Next.js/React Fullstack (TypeScript) + Prisma + Stripe
+-------------------------------------------------------
+✅ Success! Metadata Detected:
+   - 🚀 Summary: This is a full-stack web application built with Next.js, leveraging its App Router for both frontend UI and API routes. It uses Prisma as an ORM to interact with a database and integrates NextAuth.js for robust authentication. Payments are handled via Stripe, providing a complete e-commerce or subscription platform.
+   - 📌 Entry Point: app/page.tsx
+   - 💻 Framework: Next.js
+   - 💾 Database: Prisma
+   - 🔒 Authentication: NextAuth.js
+   - 🌐 External APIs: [Stripe]
+   - 🛠️ Tech Stack: [Next.js, React, TypeScript, Prisma, NextAuth.js, Stripe]
+   - 📁 Modules Count: 5
+   - 🔵 Nodes Count: 6
+   - 🔗 Edges Count: 6
+
+-------------------------------------------------------
+Testing: Repo 3: Python/Django Backend (Postgres + JWT)
+-------------------------------------------------------
+✅ Success! Metadata Detected:
+   - 🚀 Summary: This is a Django REST API project designed to expose data via a web interface. It uses Django's ORM for data modeling with PostgreSQL and Django REST Framework for building robust API endpoints.
+   - 📌 Entry Point: manage.py
+   - 💻 Framework: Django, Django REST Framework
+   - 💾 Database: PostgreSQL
+   - 🔒 Authentication: Django Authentication
+   - 🌐 External APIs: []
+   - 🛠️ Tech Stack: [Python, Django, Django REST Framework, PostgreSQL]
+   - 📁 Modules Count: 4
+   - 🔵 Nodes Count: 5
+   - 🔗 Edges Count: 5
+
+-------------------------------------------------------
+Testing: Repo 4: Vite/React SPA + Tailwind (No Backend/DB)
+-------------------------------------------------------
+✅ Success! Metadata Detected:
+   - 🚀 Summary: This project is a frontend Single Page Application (SPA) built with React and Vite. It utilizes a component-based architecture for its user interface and Tailwind CSS for styling.
+   - 📌 Entry Point: src/main.jsx
+   - 💻 Framework: React, Vite
+   - 💾 Database: None
+   - 🔒 Authentication: None
+   - 🌐 External APIs: []
+   - 🛠️ Tech Stack: [JavaScript, React, Vite, Tailwind CSS]
+   - 📁 Modules Count: 3
+   - 🔵 Nodes Count: 3
+   - 🔗 Edges Count: 2
+
+-------------------------------------------------------
+Testing: Repo 5: Java/Spring Boot Backend (MySQL + Spring Security)
+-------------------------------------------------------
+✅ Success! Metadata Detected:
+   - 🚀 Summary: This is a Java Spring Boot application designed for user management, exposing RESTful APIs. It follows a layered architecture with dedicated modules for controllers, data models, and configurations. The application utilizes Spring Security for authentication and connects to a MySQL database for data persistence.
+   - 📌 Entry Point: src/main/java/com/example/demo/DemoApplication.java
+   - 💻 Framework: Spring Boot
+   - 💾 Database: MySQL
+   - 🔒 Authentication: Spring Security
+   - 🌐 External APIs: []
+   - 🛠️ Tech Stack: [Java, Spring Boot, Maven, MySQL, Spring Security]
+   - 📁 Modules Count: 4
+   - 🔵 Nodes Count: 5
+   - 🔗 Edges Count: 4
+```
+
+---
+
+## ✅ Day 6 End-of-Day Checklist
+
+Use this checklist to confirm the Day 6 task is fully complete:
+
+- [x] Improved prompts configured under Gemini (`geminiService.js`) and Groq (`groqService.js`).
+- [x] The AI analyzer extracts entryPoint, framework, database, externalAPIs, and authentication.
+- [x] Programmatic fallback parses and populates all 5 fields under offline conditions.
+- [x] Main backend analyzer (`geminiAnalyzer.js`) synced with prompt and fallback logic.
+- [x] Frontend dashboard interface updated to declare and render the new metadata fields.
+- [x] Run `node ai/test-5-repos.js` and confirmed all 5 repo types pass successfully.
+- [x] System starts up cleanly with `npm run dev` on ports 3000 and 5000.
 
 

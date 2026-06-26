@@ -41,19 +41,27 @@ File Tree JSON:
 ${JSON.stringify(fileTree, null, 2)}
 
 Instructions:
-1. Identify the main entry file of the codebase (e.g. index.js, App.js, src/index.tsx, main.ts).
-2. Group files/directories into 2 to 5 high-level architectural modules (e.g. Controllers, Routes, Components, Utilities, Hooks, Pages).
-3. For each module, determine:
+1. Identify the main entry file of the codebase (e.g. index.js, App.js, src/index.tsx, main.ts, main.py).
+2. Identify the primary framework or library used to structure the project (e.g., Next.js, Express, React, Spring Boot, Django, Flask, FastAPI). If none is found, return "None".
+3. Identify the primary database management system or database ORM libraries detected (e.g., MongoDB, PostgreSQL, MySQL, SQLite, Mongoose, Prisma, SQLAlchemy). If none is found, return "None".
+4. Extract a list of up to 4 key external APIs, integrations, or messaging/payment gateways detected in dependency/code structure (e.g., Stripe, Twilio, SendGrid, GitHub API, Firebase, Auth0). If none are found, return an empty array.
+5. Identify the primary mechanism used to handle users, permissions, and credentials (e.g., JWT, NextAuth, OAuth2, Passport.js, Session, Firebase Auth). If none is found, return "None".
+6. Extract a list of up to 6 key technologies, frameworks, databases, or libraries detected in the codebase (e.g. React, Next.js, Express, MongoDB, TailwindCSS, TypeScript) and return them in "techStack".
+7. Group files/directories into 2 to 5 high-level architectural modules (e.g. Controllers, Routes, Components, Utilities, Hooks, Pages).
+   For each module, determine:
    - "name": The folder or module name.
    - "type": Its role type (e.g. Directory, Controller, Router, Component, Utility).
    - "description": A short one-sentence explanation of what it does.
    - "children": List up to 3 key files (filenames only, no paths) belonging to this module.
-4. Extract a list of up to 6 key technologies, frameworks, databases, or libraries detected in the codebase (e.g. React, Next.js, Express, MongoDB, TailwindCSS, TypeScript) and return them in "techStack".
-5. Generate a high-level summary of the repository's codebase and architecture in 2-3 sentences.
-6. Respond STRICTLY with a valid JSON object matching the schema:
+8. Generate a high-level, concise summary of the repository's codebase and architecture in 2-3 sentences.
+9. Respond STRICTLY with a valid JSON object matching the schema:
 {
   "summary": "string describing the high-level architecture of the repository in 2-3 sentences",
   "entryPoint": "string",
+  "framework": "string",
+  "database": "string",
+  "externalAPIs": ["string"],
+  "authentication": "string",
   "techStack": ["string"],
   "modules": [
     {
@@ -137,6 +145,10 @@ Respond STRICTLY with this JSON schema:
 {
   "summary": "2-3 sentence description of the codebase architecture",
   "entryPoint": "main entry filename",
+  "framework": "detected framework",
+  "database": "detected database",
+  "externalAPIs": ["api1", "api2"],
+  "authentication": "detected auth method",
   "techStack": ["framework1", "database2", "library3"],
   "modules": [
     {
@@ -310,9 +322,46 @@ function generateFallbackArchitecture(fileTree) {
 
   const uniqueTechStack = Array.from(new Set(techStack)).slice(0, 6);
 
+  let framework = 'Express';
+  let database = 'SQLite';
+  const externalAPIs = [];
+  let authentication = 'None';
+
+  if (uniqueTechStack.includes('Next.js')) {
+    framework = 'Next.js';
+  } else if (uniqueTechStack.includes('React')) {
+    framework = 'React SPA';
+  } else if (uniqueTechStack.includes('Express')) {
+    framework = 'Express.js';
+  }
+
+  if (uniqueTechStack.includes('MongoDB') || uniqueTechStack.includes('Mongoose')) {
+    database = 'MongoDB';
+  } else if (uniqueTechStack.includes('SQLite')) {
+    database = 'SQLite';
+  }
+
+  if (allNames.some(n => n.includes('auth') || n.includes('jwt') || n.includes('passport') || n.includes('login') || n.includes('session'))) {
+    authentication = 'JWT / Session-based';
+  }
+
+  if (allNames.some(n => n.includes('stripe') || n.includes('paypal') || n.includes('sendgrid') || n.includes('twilio') || n.includes('firebase'))) {
+    if (allNames.some(n => n.includes('stripe'))) externalAPIs.push('Stripe API');
+    if (allNames.some(n => n.includes('sendgrid'))) externalAPIs.push('SendGrid API');
+    if (allNames.some(n => n.includes('twilio'))) externalAPIs.push('Twilio API');
+    if (allNames.some(n => n.includes('firebase'))) externalAPIs.push('Firebase API');
+  }
+  if (externalAPIs.length === 0) {
+    externalAPIs.push('None detected');
+  }
+
   return {
     summary,
     entryPoint,
+    framework,
+    database,
+    externalAPIs,
+    authentication,
     techStack: uniqueTechStack,
     modules
   };

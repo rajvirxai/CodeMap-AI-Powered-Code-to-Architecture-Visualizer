@@ -93,16 +93,39 @@ INPUT:
 You will receive a JSON tree representing folders and files of a code repository. The tree has a recursive structure where folders and files are nodes containing properties: "name" (string), "type" (string: "folder" or "file"), and optionally "children" (array of nested node objects).
 
 GOAL:
-Infer the system architecture from the repository structure and return ONLY a valid JSON object with:
-- summary: project overview
-- nodes: architectural entities
-- edges: relationships between entities
+Infer the system architecture and technical layout from the repository structure. You must detect the five key elements:
+1. "entryPoint": The main execution/bootstrap file of the codebase (e.g. index.js, App.jsx, src/index.tsx, main.py, server.js).
+2. "framework": The primary framework or library used to structure the project (e.g., Next.js, Express, React, Spring Boot, Django, Flask, FastAPI). If none is found, return "None".
+3. "database": The primary database management system or database ORM libraries detected (e.g., MongoDB, PostgreSQL, MySQL, SQLite, Mongoose, Prisma, SQLAlchemy). If none is found, return "None".
+4. "externalAPIs": A list of up to 4 key external APIs, integrations, or messaging/payment gateways detected in dependency/code structure (e.g., Stripe, Twilio, SendGrid, GitHub API, Firebase, Auth0). If none are found, return an empty array.
+5. "authentication": The primary mechanism used to handle users, permissions, and credentials (e.g., JWT, NextAuth, OAuth2, Passport.js, Session, Firebase Auth). If none is found, return "None".
+
+Additionally, generate:
+- "summary": A concise high-level architecture summary in 2-3 sentences (under 100 words).
+- "techStack": An array of up to 6 key technologies (frameworks, databases, languages, libraries) detected.
+- "modules": Group files/directories into 2 to 5 high-level architectural modules (e.g. Controllers, Routes, Components, Utilities, Hooks, Pages).
+- "nodes": Architectural entities in the graph (used for visual rendering).
+- "edges": Relationships between visual entities.
 
 IMPORTANT RULES:
 1. Return only JSON. Do not add explanations, markdown, comments, or extra text.
 2. Use this exact output format:
 {
   "summary": "",
+  "entryPoint": "",
+  "framework": "",
+  "database": "",
+  "externalAPIs": [],
+  "authentication": "",
+  "techStack": [],
+  "modules": [
+    {
+      "name": "module name",
+      "type": "Directory|Controller|Router|Component|Utility|Service|Database|Hook",
+      "description": "one sentence description",
+      "children": ["filename1", "filename2"]
+    }
+  ],
   "nodes": [],
   "edges": []
 }
@@ -136,6 +159,7 @@ IMPORTANT RULES:
    - Architectural layers
    - Key responsibilities
 15. The summary must be concise and under 100 words.
+
 ANALYSIS APPROACH:
 - Identify the major layers of the application.
 - Detect relationships such as:
