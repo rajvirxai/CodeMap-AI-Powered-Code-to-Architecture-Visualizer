@@ -131,9 +131,9 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-950 text-white">
-      <div className="w-full max-w-lg p-8 border border-zinc-800 bg-zinc-900/40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md">
-        <h2 className="text-2xl font-bold tracking-tight text-center font-sans mb-8">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-zinc-950 text-white">
+      <div className="w-full max-w-lg p-6 sm:p-8 border border-zinc-800 bg-zinc-900/40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-center font-sans mb-8">
           Connect Your Repository
         </h2>
 
@@ -224,24 +224,6 @@ export default function UploadPage() {
           >
             {loading ? 'Processing...' : 'Generate CodeMap'}
           </button>
-
-          <button
-            type="button"
-            onClick={() => router.push('/loading-state?folderId=mock-app')}
-            className="w-full py-3.5 border border-zinc-800 bg-zinc-950/45 hover:bg-zinc-900/60 text-zinc-300 font-bold font-mono tracking-wide rounded transition-all duration-200 mt-2"
-          >
-            Or Try Demo Mode (Offline)
-          </button>
-
-          <div className="text-center pt-2">
-            <a 
-              href="/demo-project.zip" 
-              download
-              className="text-xs font-mono text-zinc-500 hover:text-zinc-300 underline underline-offset-4 transition-colors"
-            >
-              Download Demo Codebase ZIP
-            </a>
-          </div>
         </form>
       </div>
     </div>

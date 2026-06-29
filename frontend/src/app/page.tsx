@@ -34,7 +34,7 @@ export default function LandingPage() {
           <span className="text-sm md:text-lg tracking-[0.3em] font-medium text-[#1E1F22] mb-[-12px]">
             VISUALIZE YOUR CODEBASE INSTANTLY
           </span>
-          <h1 className="text-[100px] md:text-[150px] font-black tracking-tighter text-[#1E1F22] leading-none mix-blend-overlay">
+          <h1 className="text-[64px] xs:text-[80px] sm:text-[100px] md:text-[150px] font-black tracking-tighter text-[#1E1F22] leading-none mix-blend-overlay">
             CODEMAP
           </h1>
           <span className="text-sm md:text-base tracking-[0.2em] font-bold text-[#1E1F22] mt-2 opacity-80 uppercase">

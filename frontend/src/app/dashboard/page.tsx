@@ -439,10 +439,10 @@ export default function DashboardPage() {
       <aside 
         className={`bg-white rounded-[24px] border border-[#E5E0D5] p-5 flex flex-col shrink-0 select-none transition-all duration-300 ease-in-out z-40
           /* Desktop layout: toggle width */
-          lg:flex lg:relative lg:inset-auto lg:h-full ${isSidebarOpen ? 'w-72 opacity-100' : 'w-0 p-0 border-0 opacity-0 pointer-events-none'}
+          lg:flex lg:relative lg:inset-auto lg:h-full ${isSidebarOpen ? 'w-72 opacity-100 translate-x-0' : 'w-0 p-0 border-0 opacity-0 pointer-events-none'}
           /* Mobile layout: floating drawer */
           fixed inset-y-4 left-4 h-[calc(100vh-6rem)] w-72 shadow-lg
-          ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-80 opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100'}
+          ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-80 opacity-0 pointer-events-none'}
         `}
       >
         <div className="flex items-center justify-between mb-4 shrink-0">

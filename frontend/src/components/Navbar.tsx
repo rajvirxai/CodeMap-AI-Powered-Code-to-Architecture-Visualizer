@@ -18,13 +18,13 @@ export default function Navbar() {
         {/* Right Side: Navigation links for 'About', 'Docs', and a circular User Profile icon */}
         <div className="flex items-center gap-6">
           <Link 
-            href="#about" 
+            href="/#about" 
             className="text-zinc-400 text-sm hover:text-white transition-colors"
           >
             About
           </Link>
           <Link 
-            href="#docs" 
+            href="/#docs" 
             className="text-zinc-400 text-sm hover:text-white transition-colors"
           >
             Docs
