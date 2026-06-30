@@ -13,6 +13,14 @@ const path = require('path');
 const MAX_FILE_SIZE_FOR_METADATA = 500 * 1024; // 500 KB limit to prevent reading massive files
 const IGNORED_FOLDERS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.vscode', 'tmp', '.next', 'out']);
 
+// Precompiled global regular expressions for faster execution during scanning
+const REQUIRE_REGEX = /require\(['"]([^'"]+)['"]\)/g;
+const IMPORT_REGEX = /import\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g;
+const EXPORT_REGEX = /export\s+(?:default\s+)?(?:const|let|var|function|class)\s+([a-zA-Z0-9_$]+)/g;
+const EXPORT_LIST_REGEX = /export\s+{([^}]+)}/g;
+const MODULE_EXPORTS_REGEX = /module\.exports\s*=\s*(?:{([^}]+)}|([a-zA-Z0-9_$]+))/g;
+const SIMPLE_EXPORT_REGEX = /exports\.([a-zA-Z0-9_$]+)\s*=/g;
+
 /**
  * Recursively scans a directory and builds a nested JSON structure.
  * 
@@ -72,10 +80,9 @@ function scanDirectory(currentPath, name, relativePath = '', isDirectory = null)
           const exports = new Set();
           const dependencies = new Set();
 
+          // Use matchAll to safely iterate over precompiled global regexes
           // 1. Regex to find imports from 'require("module")'
-          const requireRegex = /require\(['"]([^'"]+)['"]\)/g;
-          let match;
-          while ((match = requireRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(REQUIRE_REGEX)) {
             const moduleName = match[1];
             imports.add(moduleName);
             // Dependencies are local file imports (starting with '.')
@@ -85,8 +92,7 @@ function scanDirectory(currentPath, name, relativePath = '', isDirectory = null)
           }
 
           // 2. Regex to find imports from 'import ... from "module"' or 'import "module"'
-          const importRegex = /import\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g;
-          while ((match = importRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(IMPORT_REGEX)) {
             const moduleName = match[1];
             imports.add(moduleName);
             // Dependencies are local file imports (starting with '.')
@@ -96,21 +102,18 @@ function scanDirectory(currentPath, name, relativePath = '', isDirectory = null)
           }
 
           // 3. Regex to find named exports (e.g., export const myFunc = ...)
-          const exportRegex = /export\s+(?:default\s+)?(?:const|let|var|function|class)\s+([a-zA-Z0-9_$]+)/g;
-          while ((match = exportRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(EXPORT_REGEX)) {
             exports.add(match[1]);
           }
 
           // 4. Regex to find export blocks (e.g., export { a, b })
-          const exportListRegex = /export\s+{([^}]+)}/g;
-          while ((match = exportListRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(EXPORT_LIST_REGEX)) {
             const items = match[1].split(',').map(i => i.trim().split(/\s+/)[0]);
             items.forEach(i => { if (i) exports.add(i); });
           }
 
           // 5. Regex to find module.exports (e.g., module.exports = { a, b } or module.exports = myFunc)
-          const moduleExportsRegex = /module\.exports\s*=\s*(?:{([^}]+)}|([a-zA-Z0-9_$]+))/g;
-          while ((match = moduleExportsRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(MODULE_EXPORTS_REGEX)) {
             if (match[1]) {
               // Extract from object
               const items = match[1].split(',').map(i => i.trim().split(/\s+/)[0]);
@@ -122,8 +125,7 @@ function scanDirectory(currentPath, name, relativePath = '', isDirectory = null)
           }
 
           // 6. Regex to find individual property exports (e.g., exports.myFunc = ...)
-          const simpleExportRegex = /exports\.([a-zA-Z0-9_$]+)\s*=/g;
-          while ((match = simpleExportRegex.exec(content)) !== null) {
+          for (const match of content.matchAll(SIMPLE_EXPORT_REGEX)) {
             exports.add(match[1]);
           }
 

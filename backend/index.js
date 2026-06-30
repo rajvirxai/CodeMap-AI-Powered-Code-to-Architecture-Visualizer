@@ -11,6 +11,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
 const repoRoutes = require('./routes/repoRoutes');
 
 // Initialize the Express application
@@ -41,7 +42,16 @@ app.use('/', repoRoutes);
  * Captures any unhandled errors in route handlers or middleware (e.g., Multer file type rejection).
  */
 app.use((err, req, res, next) => {
-  const status = err.status || ((err.code === 'LIMIT_UNEXPECTED_FILE' || err.message.includes('Only ZIP files')) ? 400 : 500);
+  // Multer error codes (e.g., payload too large) should return 400
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  }
+
+  // Use the status code from the error object if provided, otherwise default to 500
+  const status = err.status || 500;
 
   if (status >= 500) {
     console.error('Unhandled Server Error:', err.message);

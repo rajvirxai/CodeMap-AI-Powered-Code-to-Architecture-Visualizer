@@ -32,38 +32,66 @@ const getHealth = (req, res) => {
 
 /**
  * 2. Upload Repo Endpoint
- * Receives the ZIP file via Multer, extracts it using adm-zip,
+ * Receives the ZIP file via Multer, validates it, extracts it using adm-zip,
  * and returns a folderId to the client for subsequent analysis.
  */
 const uploadRepo = (req, res) => {
   try {
     console.log(`[API POST /upload] Started processing upload request.`);
-    // Check if multer successfully captured a file
+    
+    // 1. Validate that multer successfully captured a file
     if (!req.file) {
       console.warn(`[API Warning] Upload failed: No file provided in request.`);
       return res.status(400).json({ error: 'No file uploaded. Please upload a ZIP file.' });
     }
 
-    // Ensure the file is indeed a ZIP
+    const zipFilePath = req.file.path;
+
+    // 2. Additional validation: Ensure the file is indeed a ZIP by checking extension
     if (path.extname(req.file.originalname).toLowerCase() !== '.zip') {
       console.warn(`[API Warning] Upload failed: Invalid file format (${req.file.originalname}).`);
+      fs.unlinkSync(zipFilePath); // Clean up invalid file
       return res.status(400).json({ error: 'Invalid file format. Only ZIP files are supported.' });
     }
 
     // Generate a unique folder name using the current timestamp and clean original filename
     const cleanName = path.basename(req.file.originalname, '.zip').replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 15);
     const folderId = `${Date.now()}-${cleanName}`;
-    
-    // Resolve paths
-    const zipFilePath = req.file.path;
     const extractPath = path.join(__dirname, '../uploads/extracted', folderId);
 
-    // Initialize AdmZip to extract the uploaded file
-    const zip = new AdmZip(zipFilePath);
+    // 3. Initialize AdmZip and validate ZIP contents
+    let zip;
+    try {
+      zip = new AdmZip(zipFilePath);
+      const zipEntries = zip.getEntries();
+      
+      // Validate that the ZIP is not empty
+      if (zipEntries.length === 0) {
+        console.warn(`[API Warning] Upload failed: ZIP file is empty.`);
+        fs.unlinkSync(zipFilePath); // Clean up empty file
+        return res.status(400).json({ error: 'The uploaded ZIP file is empty.' });
+      }
+    } catch (zipError) {
+      console.warn(`[API Warning] Upload failed: Corrupted or invalid ZIP file.`, zipError.message);
+      fs.unlinkSync(zipFilePath); // Clean up corrupted file
+      return res.status(400).json({ error: 'The uploaded file is not a valid or readable ZIP archive.' });
+    }
     
-    // Extract all contents to target path.
+    // 4. Extract all contents to target path.
     // The second parameter 'true' forces overwrite if files exist.
     zip.extractAllTo(extractPath, true);
+
+    // 5. Validate that extraction actually produced files
+    if (!fs.existsSync(extractPath) || fs.readdirSync(extractPath).length === 0) {
+      console.warn(`[API Warning] Upload failed: Extracted folder is empty.`);
+      fs.unlinkSync(zipFilePath);
+      // Clean up empty extracted directory
+      if (fs.existsSync(extractPath)) fs.rmdirSync(extractPath);
+      return res.status(400).json({ error: 'The repository appears to be empty after extraction.' });
+    }
+
+    // Clean up the uploaded ZIP to save space after successful extraction
+    fs.unlinkSync(zipFilePath);
 
     // Respond back with the unique folder ID that frontend can use to request analysis
     console.log(`[API Success] File uploaded and extracted successfully. Folder ID: ${folderId}`);
@@ -73,6 +101,10 @@ const uploadRepo = (req, res) => {
     });
   } catch (error) {
     console.error('[API Error /upload] Error during file upload or extraction:', error);
+    // Attempt cleanup on unexpected errors
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
     return res.status(500).json({
       error: 'Failed to process the uploaded ZIP file',
       details: error.message
@@ -162,23 +194,31 @@ const cloneRepo = async (req, res) => {
     }
 
     // Sanitize GitHub browser URLs to extract the base clone URL.
-    // Users often paste URLs like:
-    //   https://github.com/user/repo/tree/main
-    //   https://github.com/user/repo/blob/main/file.js
-    //   https://github.com/user/repo/issues
-    // Git clone only accepts: https://github.com/user/repo
     let cleanRepoUrl = repoUrl.trim();
     try {
       const parsedUrl = new URL(cleanRepoUrl);
+      
+      // Basic security validation: Only allow http and https protocols
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        console.warn(`[API Warning] Clone failed: Invalid protocol ${parsedUrl.protocol}`);
+        return res.status(400).json({ error: 'Invalid repository URL. Only HTTP and HTTPS protocols are supported.' });
+      }
+
       const parts = parsedUrl.pathname.split('/').filter(Boolean);
       // GitHub repo path is always /owner/repo — everything after is browser navigation
       if (parts.length >= 2) {
         const owner = parts[0];
         const repo = parts[1].replace(/\.git$/, '');
         cleanRepoUrl = `${parsedUrl.protocol}//${parsedUrl.host}/${owner}/${repo}`;
+      } else {
+        // If it doesn't have at least an owner and repo, it's likely invalid
+        console.warn(`[API Warning] Clone failed: URL does not look like a valid repository.`);
+        return res.status(400).json({ error: 'Invalid repository URL structure. Expected format: https://host/owner/repo' });
       }
     } catch (e) {
-      // If URL parsing fails, use original URL as-is
+      // If URL parsing fails, it's not a valid URL
+      console.warn(`[API Warning] Clone failed: Unparseable URL.`);
+      return res.status(400).json({ error: 'Invalid repository URL provided.' });
     }
 
     // Extract a clean name from the sanitized URL
