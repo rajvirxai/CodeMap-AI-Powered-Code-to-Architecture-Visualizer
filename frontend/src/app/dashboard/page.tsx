@@ -14,7 +14,7 @@ import {
   Info,
   Menu
 } from 'lucide-react';
-import { NodeDetailsPanel } from '@/components/NodeDetailsPanel';
+import { NodeDetailsPanel, NodeData } from '@/components/NodeDetailsPanel';
 
 interface FileNode {
   name: string;
@@ -134,7 +134,7 @@ export default function DashboardPage() {
   };
 
   // Managing states for tracking clicked nodes, loading indicators, and API status
-  const [selectedNode, setSelectedNode] = useState<any | null>(null);
+  const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(true);
   const [isAIAnalyzing, setIsAIAnalyzing] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -282,7 +282,7 @@ export default function DashboardPage() {
     };
   }, [activeFileNode]);
 
-  const handleNodeClick = (clickedNodeData: any) => {
+  const handleNodeClick = (clickedNodeData: { id: string; type: string }) => {
     setSelectedNode({ id: clickedNodeData.id, type: clickedNodeData.type });
     setIsPanelOpen(true);
     setIsAIAnalyzing(true);
@@ -806,7 +806,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
     return Array.from(unique);
   }, [data.imports, data.dependencies]);
 
-  const rightNodes = data.exports || [];
+  const rightNodes = useMemo(() => data.exports || [], [data.exports]);
 
   const updateConnections = () => {
     if (!containerRef.current || !centerRef.current) return;
@@ -833,7 +833,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
     const centerCoords = getRelativeCoords(centerRef.current);
     const newLines: { d: string }[] = [];
 
-    leftItemRefs.current.forEach((itemEl, idx) => {
+    leftItemRefs.current.forEach((itemEl) => {
       if (!itemEl) return;
       const itemCoords = getRelativeCoords(itemEl);
       const startX = itemCoords.x + itemCoords.w;
@@ -846,7 +846,7 @@ const FileDependencyVisualizer: React.FC<FileDependencyVisualizerProps> = ({
       newLines.push({ d });
     });
 
-    rightItemRefs.current.forEach((itemEl, idx) => {
+    rightItemRefs.current.forEach((itemEl) => {
       if (!itemEl) return;
       const itemCoords = getRelativeCoords(itemEl);
       const startX = centerCoords.x + centerCoords.w;

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-interface AIData {
+export interface AIData {
   purpose: string;
   inputs: string[];
   outputs: string[];
   role: string;
 }
 
-interface NodeData {
+export interface NodeData {
   id: string;
   type: string;
   aiDetails?: AIData;
@@ -48,8 +48,12 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
 }) => {
   const [cachedNode, setCachedNode] = useState<NodeData | null>(null);
   const [viewMode, setViewMode] = useState<'summary' | 'node'>('summary');
+  const [prevNode, setPrevNode] = useState<NodeData | null>(null);
+  const [prevIsOpen, setPrevIsOpen] = useState<boolean>(false);
 
-  useEffect(() => {
+  if (node !== prevNode || isOpen !== prevIsOpen) {
+    setPrevNode(node);
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       if (node) {
         setCachedNode(node);
@@ -58,7 +62,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
         setViewMode('summary');
       }
     }
-  }, [node, isOpen]);
+  }
 
   return (
     <>

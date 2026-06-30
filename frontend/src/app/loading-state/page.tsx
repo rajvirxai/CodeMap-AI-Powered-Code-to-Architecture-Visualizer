@@ -133,7 +133,7 @@ function LoadingStateContent() {
       window.clearTimeout(progressTimeout);
       window.clearTimeout(redirectTimeout);
     };
-  }, [analysisData, router]);
+  }, [analysisData, router, folderId]);
 
   useEffect(() => {
     if (progress >= 90) return;
