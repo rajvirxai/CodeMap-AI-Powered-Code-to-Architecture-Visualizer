@@ -316,8 +316,21 @@ const generateReadme = async (req, res) => {
     const folderDisplayName = folderId.substring(folderId.indexOf('-') + 1) || 'project';
     const repoTree = scanDirectory(folderPath, folderDisplayName);
 
+    // Try to load cached architecture analysis from MongoDB to get metadata
+    let projectMetadata = null;
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const cached = await Analysis.findOne({ folderId });
+        if (cached && cached.architecture) {
+          projectMetadata = cached.architecture;
+        }
+      } catch (dbErr) {
+        console.error('⚠️ Database lookup error during README generation:', dbErr.message);
+      }
+    }
+
     // Generate README content
-    const readmeContent = await generateReadmeFromTree(folderDisplayName, repoTree);
+    const readmeContent = await generateReadmeFromTree(folderDisplayName, repoTree, projectMetadata);
 
     console.log(`[API Success] README generated successfully for: ${folderId}`);
     return res.status(200).json({

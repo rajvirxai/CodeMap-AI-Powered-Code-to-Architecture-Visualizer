@@ -141,18 +141,18 @@ async function explainCodeFile({ fileName, fileContent, provider = 'gemini', mod
  * @param {string} [options.model] - Optional custom model override.
  * @returns {Promise<string>} The generated README text.
  */
-async function generateReadmeFromTree({ projectName, fileTree, provider = 'gemini', model }) {
+async function generateReadmeFromTree({ projectName, fileTree, projectMetadata = null, provider = 'gemini', model }) {
   const selectedProvider = (provider || 'gemini').toLowerCase();
 
   if (selectedProvider === 'groq') {
-    return await readmeGroq(projectName, fileTree, model);
+    return await readmeGroq(projectName, fileTree, projectMetadata, model);
   } else {
     try {
-      return await readmeGemini(projectName, fileTree, model);
+      return await readmeGemini(projectName, fileTree, projectMetadata, model);
     } catch (error) {
       console.warn(`Gemini README generation failed (${error.message}). Trying Groq fallback...`);
       try {
-        return await readmeGroq(projectName, fileTree, GROQ_DEFAULT_MODEL);
+        return await readmeGroq(projectName, fileTree, projectMetadata, GROQ_DEFAULT_MODEL);
       } catch (groqError) {
         console.warn(`Groq fallback README generation also failed (${groqError.message}). Using programmatic fallback.`);
         const { generateProgrammaticReadme } = await import('./geminiService.js');

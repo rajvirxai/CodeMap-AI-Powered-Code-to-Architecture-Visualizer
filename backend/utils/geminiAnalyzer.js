@@ -378,6 +378,58 @@ async function explainCodeFile(fileName, fileContent) {
   const apiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
+  const lowerName = fileName.toLowerCase();
+  const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.zip', '.gz', '.tar', '.mp3', '.mp4', '.woff', '.woff2', '.ttf', '.eot', '.db', '.sqlite'];
+  const isBinary = binaryExtensions.some(ext => lowerName.endsWith(ext));
+  const isEmpty = !fileContent || fileContent.trim() === '';
+
+  if (isBinary || isEmpty) {
+    let purpose = `Static resource or asset file: ${fileName}`;
+    let role = "Asset";
+    let dependencies = [];
+    if (lowerName.endsWith('.pdf')) {
+      purpose = "Document resource file containing text or layouts.";
+      role = "Document";
+    } else if (['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico'].some(ext => lowerName.endsWith(ext))) {
+      purpose = "Visual asset or image element used in user interface representation.";
+      role = "Image Asset";
+    } else if (lowerName.endsWith('.db') || lowerName.endsWith('.sqlite')) {
+      purpose = "Local database storage file containing structured tables.";
+      role = "Database Storage";
+    } else if (lowerName.endsWith('.zip') || lowerName.endsWith('.gz') || lowerName.endsWith('.tar')) {
+      purpose = "Compressed archive directory containing source files or build assets.";
+      role = "Archive";
+    } else if (isEmpty) {
+      purpose = `Empty configuration or placeholder file: ${fileName}`;
+      role = "Configuration";
+    }
+    return {
+      purpose,
+      inputs: [],
+      outputs: [],
+      dependencies,
+      role
+    };
+  }
+
+  if (lowerName === '.gitignore') {
+    return {
+      purpose: "Specifies intentionally untracked files and folders that git should ignore.",
+      inputs: [],
+      outputs: [],
+      dependencies: [],
+      role: "Configuration"
+    };
+  } else if (lowerName === '.env' || lowerName === '.env.example') {
+    return {
+      purpose: "Stores system environment variables, external credentials, and API configuration parameters.",
+      inputs: [],
+      outputs: [],
+      dependencies: [],
+      role: "Configuration"
+    };
+  }
+
   const prompt = `Analyze the following code file and generate a high-quality software architecture explanation.
   
 File Name: ${fileName}
@@ -578,13 +630,26 @@ function generateProgrammaticExplanation(fileName, fileContent) {
  * @param {Object} fileTree - The repository structure JSON tree.
  * @returns {Promise<string>} The generated markdown README text.
  */
-async function generateReadmeFromTree(projectName, fileTree) {
+async function generateReadmeFromTree(projectName, fileTree, projectMetadata = null) {
   const apiKey = process.env.GEMINI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
+  let metadataStr = '';
+  if (projectMetadata && typeof projectMetadata === 'object') {
+    metadataStr = `
+Primary architectural metadata detected for this repository:
+- Main Entry Point: ${projectMetadata.entryPoint || 'unknown'}
+- Core Framework: ${projectMetadata.framework || 'None'}
+- Database: ${projectMetadata.database || 'None'}
+- Authentication: ${projectMetadata.authentication || 'None'}
+- External APIs: ${projectMetadata.externalAPIs ? projectMetadata.externalAPIs.join(', ') : 'None'}
+- Tech Stack: ${projectMetadata.techStack ? projectMetadata.techStack.join(', ') : 'None'}
+`;
+  }
+
   const prompt = `You are a professional technical writer and senior developer. 
 Your task is to generate a comprehensive, production-ready, beautiful README.md file in markdown format for a project repository named "${projectName}".
-
+${metadataStr}
 Below is the JSON file tree representation of the codebase:
 \`\`\`json
 ${JSON.stringify(fileTree, null, 2)}
@@ -594,7 +659,7 @@ Please include the following standard sections in the README.md:
 1. **Title and Subtitle**: A descriptive and catchy description of the project.
 2. **Key Features**: Bullets outlining the primary features.
 3. **Project Architecture**: Brief overview of the folders and architecture layers (e.g. backend routes, frontend views, utilities).
-4. **Getting Started**: Steps to install dependencies and run the application locally.
+4. **Getting Started**: Steps to install dependencies and run the application locally (make this specific to the detected framework and tech stack).
 5. **Technologies Used**: A neat list or table of the key libraries and technologies.
 6. **License / Contributing**: Standard placeholder footer text.
 
@@ -631,17 +696,17 @@ Guidelines:
       throw new Error('Empty response from Gemini API');
     } catch (error) {
       console.warn('⚠️ GEMINI ANALYZER WARNING: Gemini README generation failed. Trying Groq fallback. Error:', error.message);
-      return generateReadmeWithGroq(projectName, fileTree);
+      return generateReadmeWithGroq(projectName, fileTree, projectMetadata);
     }
   } else {
-    return generateReadmeWithGroq(projectName, fileTree);
+    return generateReadmeWithGroq(projectName, fileTree, projectMetadata);
   }
 }
 
 /**
  * Groq fallback README generator.
  */
-async function generateReadmeWithGroq(projectName, fileTree) {
+async function generateReadmeWithGroq(projectName, fileTree, projectMetadata = null) {
   const groqKey = process.env.GROQ_API_KEY;
 
   if (!groqKey) {
@@ -649,11 +714,25 @@ async function generateReadmeWithGroq(projectName, fileTree) {
     return generateProgrammaticReadme(projectName, fileTree);
   }
 
+  let metadataStr = '';
+  if (projectMetadata && typeof projectMetadata === 'object') {
+    metadataStr = `
+Primary architectural metadata detected for this repository:
+- Main Entry Point: ${projectMetadata.entryPoint || 'unknown'}
+- Core Framework: ${projectMetadata.framework || 'None'}
+- Database: ${projectMetadata.database || 'None'}
+- Authentication: ${projectMetadata.authentication || 'None'}
+- External APIs: ${projectMetadata.externalAPIs ? projectMetadata.externalAPIs.join(', ') : 'None'}
+- Tech Stack: ${projectMetadata.techStack ? projectMetadata.techStack.join(', ') : 'None'}
+`;
+  }
+
   const prompt = `Generate a professional, comprehensive README.md file in markdown format for a project repository named "${projectName}".
+${metadataStr}
 Below is the JSON file tree:
 ${JSON.stringify(fileTree, null, 2)}
 
-Return ONLY raw markdown text. No explanations.`;
+Return ONLY raw markdown text. No explanations. Make installation instructions specific to the detected framework and tech stack.`;
 
   try {
     console.log(`⚡ GEMINI ANALYZER: Generating README.md using Groq Llama...`);

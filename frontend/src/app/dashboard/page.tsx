@@ -12,7 +12,8 @@ import {
   Maximize2,
   RefreshCw,
   Info,
-  Menu
+  Menu,
+  FileText
 } from 'lucide-react';
 import { NodeDetailsPanel, NodeData } from '@/components/NodeDetailsPanel';
 
@@ -50,6 +51,8 @@ export default function DashboardPage() {
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [isExporting, setIsExporting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'png' | 'jpeg' | 'svg' | 'pdf'>('png');
 
   // Close sidebar by default on smaller screens
   useEffect(() => {
@@ -126,11 +129,233 @@ export default function DashboardPage() {
 
   // Export handler
   const handleExport = () => {
+    setShowExportModal(true);
+  };
+
+  const triggerExport = () => {
+    setShowExportModal(false);
     setIsExporting(true);
+    
     setTimeout(() => {
-      setIsExporting(false);
-      alert('CodeMap architecture exported successfully as PNG!');
-    }, 1200);
+      try {
+        const leftNodesList = fileDiagramData 
+          ? Array.from(new Set([...(fileDiagramData.imports || []), ...(fileDiagramData.dependencies || [])]))
+          : [];
+        const rightNodesList = fileDiagramData ? (fileDiagramData.exports || []) : [];
+
+        const leftCount = leftNodesList.length;
+        const rightCount = rightNodesList.length;
+        const maxCount = Math.max(leftCount, rightCount, 1);
+        const height = Math.max(450, maxCount * 70 + 100);
+        const width = 1000;
+        
+        // Compile helper SVG structure
+        const centerBox = { x: 380, y: height / 2 - 40, w: 240, h: 80 };
+        const drawCurve = (startX: number, startY: number, endX: number, endY: number) => {
+          const controlX = (startX + endX) / 2;
+          return `M ${startX} ${startY} C ${controlX} ${startY}, ${controlX} ${endY}, ${endX} ${endY}`;
+        };
+        
+        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`;
+        
+        // Grid background
+        svgContent += `
+          <rect width="100%" height="100%" fill="#FCFBF9" />
+          <defs>
+            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E5E0D5" stroke-width="1" opacity="0.35" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid)" />
+        `;
+        
+        // Connection lines (drawn first so they render behind nodes)
+        const leftStartY = height / 2 - (leftCount * 70) / 2;
+        leftNodesList.forEach((node, idx) => {
+          const nodeX = 60;
+          const nodeY = leftStartY + idx * 70;
+          const nodeW = 220;
+          const nodeH = 50;
+          const pathD = drawCurve(nodeX + nodeW, nodeY + nodeH / 2, centerBox.x, centerBox.y + centerBox.h / 2);
+          svgContent += `<path d="${pathD}" fill="none" stroke="#C2BBA8" stroke-width="2" stroke-dasharray="5,5" />`;
+        });
+        
+        const rightStartY = height / 2 - (rightCount * 70) / 2;
+        rightNodesList.forEach((node, idx) => {
+          const nodeX = 720;
+          const nodeY = rightStartY + idx * 70;
+          const nodeW = 220;
+          const nodeH = 50;
+          const pathD = drawCurve(centerBox.x + centerBox.w, centerBox.y + centerBox.h / 2, nodeX, nodeY + nodeH / 2);
+          svgContent += `<path d="${pathD}" fill="none" stroke="#C2BBA8" stroke-width="2" stroke-dasharray="5,5" />`;
+        });
+        
+        // Draw left nodes (imports)
+        leftNodesList.forEach((node, idx) => {
+          const nodeX = 60;
+          const nodeY = leftStartY + idx * 70;
+          const nodeW = 220;
+          const nodeH = 50;
+          svgContent += `
+            <rect x="${nodeX}" y="${nodeY}" width="${nodeW}" height="${nodeH}" rx="12" fill="#FFFFFF" stroke="#E5E0D5" stroke-width="1.5" />
+            <circle cx="${nodeX + 18}" cy="${nodeY + 25}" r="4" fill="#60A5FA" />
+            <text x="${nodeX + 32}" y="${nodeY + 29}" font-family="monospace" font-size="11" fill="#1E1F22" font-weight="bold">${node}</text>
+          `;
+        });
+        
+        // Draw right nodes (exports)
+        rightNodesList.forEach((node, idx) => {
+          const nodeX = 720;
+          const nodeY = rightStartY + idx * 70;
+          const nodeW = 220;
+          const nodeH = 50;
+          svgContent += `
+            <rect x="${nodeX}" y="${nodeY}" width="${nodeW}" height="${nodeH}" rx="12" fill="#FFFFFF" stroke="#E5E0D5" stroke-width="1.5" />
+            <circle cx="${nodeX + 18}" cy="${nodeY + 25}" r="4" fill="#34D399" />
+            <text x="${nodeX + 32}" y="${nodeY + 29}" font-family="monospace" font-size="11" fill="#1E1F22" font-weight="bold">${node}</text>
+          `;
+        });
+        
+        // Draw center active node
+        svgContent += `
+          <rect x="${centerBox.x}" y="${centerBox.y}" width="${centerBox.w}" height="${centerBox.h}" rx="16" fill="#FFFFFF" stroke="#1E1F22" stroke-width="2" />
+          <text x="${centerBox.x + centerBox.w / 2}" y="${centerBox.y + 25}" font-family="sans-serif" font-size="9" fill="#9CA3AF" font-weight="bold" text-anchor="middle">ACTIVE CODE MODULE</text>
+          <text x="${centerBox.x + centerBox.w / 2}" y="${centerBox.y + 50}" font-family="monospace" font-size="14" fill="#1E1F22" font-weight="bold" text-anchor="middle">${activeFile}</text>
+        `;
+        
+        svgContent += `</svg>`;
+        
+        if (exportFormat === 'svg') {
+          const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${activeFile.split('.')[0]}_architecture.svg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } else if (exportFormat === 'pdf') {
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            printWindow.document.write(`
+              <html>
+                <head>
+                  <title>${activeFile} Architecture Map</title>
+                  <style>
+                    body {
+                      margin: 0;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      height: 100vh;
+                      background: #FCFBF9;
+                      font-family: sans-serif;
+                    }
+                    svg {
+                      width: 90%;
+                      height: auto;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                      border-radius: 12px;
+                    }
+                    @media print {
+                      body { background: white; }
+                      svg { box-shadow: none; border-radius: 0; }
+                      @page { size: landscape; }
+                    }
+                  </style>
+                </head>
+                <body>
+                  ${svgContent}
+                  <script>
+                    window.onload = function() {
+                      window.print();
+                      setTimeout(function() { window.close(); }, 500);
+                    };
+                  </script>
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+          }
+        } else {
+          // PNG or JPEG
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          const img = new Image();
+          const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          img.onload = () => {
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              const formatStr = exportFormat === 'png' ? 'image/png' : 'image/jpeg';
+              const dataUrl = canvas.toDataURL(formatStr, 0.95);
+              
+              const link = document.createElement('a');
+              link.href = dataUrl;
+              link.download = `${activeFile.split('.')[0]}_architecture.${exportFormat}`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        }
+      } catch (err) {
+        console.error('Error exporting visual canvas:', err);
+        alert('Export failed. Please try a different format.');
+      } finally {
+        setIsExporting(false);
+      }
+    }, 800);
+  };
+
+  const [isGeneratingReadme, setIsGeneratingReadme] = useState(false);
+
+  const handleGenerateReadme = async () => {
+    setIsGeneratingReadme(true);
+    try {
+      const folderId = sessionStorage.getItem('codemap_folderId');
+      if (!folderId) {
+        alert('Active folder ID not found in session. Please upload a repository first.');
+        return;
+      }
+      
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const response = await fetch(`${backendUrl}/generate-readme`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ folderId }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate README.md');
+      }
+      
+      // Trigger file download
+      const blob = new Blob([data.readme], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'README.md';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Error generating README.md:', err);
+      alert(`Readme generation failed: ${err.message}`);
+    } finally {
+      setIsGeneratingReadme(false);
+    }
   };
 
   // Managing states for tracking clicked nodes, loading indicators, and API status
@@ -526,6 +751,24 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+
+              <button
+                onClick={handleGenerateReadme}
+                disabled={isGeneratingReadme}
+                className="w-full mt-5 bg-[#FFD13B] hover:bg-[#FFE066] disabled:bg-white/10 disabled:text-neutral-500 text-[#1E1F22] py-2.5 px-4 rounded-[16px] text-xs font-bold transition-all shadow-md active:scale-95 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-2 relative z-10"
+              >
+                {isGeneratingReadme ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-[#1E1F22] border-t-transparent rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Generate README.md
+                  </>
+                )}
+              </button>
             </div>
           )}
 
@@ -776,6 +1019,50 @@ export default function DashboardPage() {
         architecture={architecture}
         projectName={treeData?.name || 'Project'}
       />
+
+      {showExportModal && (
+        <div className="fixed inset-0 bg-[#1E1F22]/40 backdrop-blur-xs flex items-center justify-center z-[100] p-4 select-none">
+          <div className="bg-white rounded-[24px] border border-[#E5E0D5] p-6 w-full max-w-sm shadow-xl flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-[#1E1F22]">Export Dependency Map</h3>
+              <p className="text-[10px] text-neutral-400 mt-1 leading-normal">
+                Download a clean, high-resolution graphic of the active visual canvas for <span className="font-mono font-bold text-neutral-600">{activeFile}</span>.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2">
+              {(['png', 'jpeg', 'svg', 'pdf'] as const).map((format) => (
+                <button
+                  key={format}
+                  onClick={() => setExportFormat(format)}
+                  className={`px-4 py-3 rounded-[16px] text-xs font-bold font-mono border text-center transition-all cursor-pointer uppercase ${
+                    exportFormat === format
+                      ? 'bg-[#1E1F22] border-[#1E1F22] text-white shadow-sm'
+                      : 'bg-[#FCFBF9] border-[#E5E0D5] hover:border-[#D2CBB8] text-[#1E1F22]'
+                  }`}
+                >
+                  {format === 'jpeg' ? 'JPG' : format}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-[#F0EDE4] mt-2">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="flex-1 py-2.5 hover:bg-[#F0EDE4] border border-transparent rounded-full text-xs font-bold text-neutral-500 hover:text-[#1E1F22] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={triggerExport}
+                className="flex-1 py-2.5 bg-[#1E1F22] text-white hover:bg-[#2C2E33] rounded-full text-xs font-bold shadow-sm transition-all cursor-pointer"
+              >
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
