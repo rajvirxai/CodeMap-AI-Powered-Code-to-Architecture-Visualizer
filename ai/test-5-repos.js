@@ -252,25 +252,28 @@ async function testRepos() {
     console.log(`Testing: ${repo.name}`);
     console.log(`-------------------------------------------------------`);
 
-    try {
-      const response = await analyzeRepository({
-        repositoryStructure: repo.structure,
-        provider: 'gemini'
-      });
+    for (const provider of ['gemini', 'groq']) {
+      console.log(`>> Running analysis with provider: [${provider.toUpperCase()}]`);
+      try {
+        const response = await analyzeRepository({
+          repositoryStructure: repo.structure,
+          provider: provider
+        });
 
-      console.log(`✅ Success! Metadata Detected:`);
-      console.log(`   - 🚀 Summary: ${response.summary}`);
-      console.log(`   - 📌 Entry Point: ${response.entryPoint}`);
-      console.log(`   - 💻 Framework: ${response.framework}`);
-      console.log(`   - 💾 Database: ${response.database}`);
-      console.log(`   - 🔒 Authentication: ${response.authentication}`);
-      console.log(`   - 🌐 External APIs: [${response.externalAPIs.join(', ')}]`);
-      console.log(`   - 🛠️ Tech Stack: [${response.techStack.join(', ')}]`);
-      console.log(`   - 📁 Modules Count: ${response.modules.length}`);
-      console.log(`   - 🔵 Nodes Count: ${response.nodes.length}`);
-      console.log(`   - 🔗 Edges Count: ${response.edges.length}`);
-    } catch (error) {
-      console.error(`❌ Failed to analyze ${repo.name}:`, error.message);
+        console.log(`   ✅ Success! Metadata Detected:`);
+        console.log(`      - 🚀 Summary: ${response.summary}`);
+        console.log(`      - 📌 Entry Point: ${response.entryPoint}`);
+        console.log(`      - 💻 Framework: ${response.framework}`);
+        console.log(`      - 💾 Database: ${response.database}`);
+        console.log(`      - 🔒 Authentication: ${response.authentication}`);
+        console.log(`      - 🌐 External APIs: [${response.externalAPIs.join(', ')}]`);
+        console.log(`      - 🛠️ Tech Stack: [${response.techStack.join(', ')}]`);
+        console.log(`      - 📁 Modules Count: ${response.modules.length}`);
+        console.log(`      - 🔵 Nodes Count: ${response.nodes.length}`);
+        console.log(`      - 🔗 Edges Count: ${response.edges.length}`);
+      } catch (error) {
+        console.error(`   ❌ Failed to analyze ${repo.name} with ${provider}:`, error.message);
+      }
     }
     console.log();
   }

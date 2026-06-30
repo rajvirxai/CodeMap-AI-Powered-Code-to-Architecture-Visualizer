@@ -91,7 +91,7 @@ app.post('/api/explain', async (req, res) => {
 
 // API endpoint to generate README.md
 app.post('/api/generate-readme', async (req, res) => {
-  const { projectName, fileTree } = req.body;
+  const { projectName, fileTree, projectMetadata } = req.body;
   const provider = req.body.provider || req.query.provider || req.headers['x-provider'] || 'gemini';
   const model = req.body.model || req.query.model || req.headers['x-model'];
 
@@ -100,7 +100,7 @@ app.post('/api/generate-readme', async (req, res) => {
   }
 
   try {
-    const readme = await generateReadmeFromTree({ projectName, fileTree, provider, model });
+    const readme = await generateReadmeFromTree({ projectName, fileTree, projectMetadata, provider, model });
     res.json({ readme });
   } catch (error) {
     console.error(`Error generating README via ${provider}:`, error);
