@@ -184,7 +184,6 @@ export default function DashboardPage() {
         rightNodesList.forEach((node, idx) => {
           const nodeX = 720;
           const nodeY = rightStartY + idx * 70;
-          const nodeW = 220;
           const nodeH = 50;
           const pathD = drawCurve(centerBox.x + centerBox.w, centerBox.y + centerBox.h / 2, nodeX, nodeY + nodeH / 2);
           svgContent += `<path d="${pathD}" fill="none" stroke="#C2BBA8" stroke-width="2" stroke-dasharray="5,5" />`;
@@ -350,9 +349,10 @@ export default function DashboardPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error generating README.md:', err);
-      alert(`Readme generation failed: ${err.message}`);
+      const errMsg = err instanceof Error ? err.message : 'An unknown error occurred';
+      alert(`Readme generation failed: ${errMsg}`);
     } finally {
       setIsGeneratingReadme(false);
     }
