@@ -37,14 +37,23 @@ const storage = multer.diskStorage({
   }
 });
 
-// Initialize Multer upload middleware
+// Initialize Multer upload middleware with improved validation
 const upload = multer({ 
   storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB max file size to prevent abuse
+  },
   fileFilter: (req, file, cb) => {
-    // Only accept .zip files
+    // Only accept .zip files by checking both extension and mimetype
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.zip') {
-      return cb(new Error('Only ZIP files are allowed'), false);
+    const isZipMimeType = file.mimetype === 'application/zip' || 
+                          file.mimetype === 'application/x-zip-compressed' || 
+                          file.mimetype === 'multipart/x-zip';
+                          
+    if (ext !== '.zip' || !isZipMimeType) {
+      const error = new Error('Only valid ZIP files are allowed');
+      error.status = 400; // Set explicit status code
+      return cb(error, false);
     }
     cb(null, true);
   }
