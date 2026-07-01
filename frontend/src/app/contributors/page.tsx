@@ -30,7 +30,7 @@ const contributors: Contributor[] = [
     linkedin: "https://linkedin.com",
   },
   {
-    name: "Samboddhi Pandit",
+    name: "Sombodhi Pandit",
     role: "Backend Developer",
     category: "Backend",
     bio: "Designed file scanning algorithms, ZIP upload extractions, and core API response routing.",
