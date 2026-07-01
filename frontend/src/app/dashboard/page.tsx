@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { 
   Folder, 
   FolderOpen, 
@@ -54,6 +55,12 @@ export default function DashboardPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportFormat, setExportFormat] = useState<'png' | 'jpeg' | 'svg' | 'pdf'>('png');
 
+  // Empty state and canvas panning states
+  const [isEmptyState, setIsEmptyState] = useState<boolean>(false);
+  const [panPos, setPanPos] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
   // Close sidebar by default on smaller screens
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -64,6 +71,11 @@ export default function DashboardPage() {
   // Retrieve cached repository tree from loading stage
   useEffect(() => {
     const cached = sessionStorage.getItem('codemap_tree');
+    
+    // Check URL parameters for ?demo=true
+    const urlParams = new URLSearchParams(window.location.search);
+    const isDemoParam = urlParams.get('demo') === 'true';
+
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -71,15 +83,18 @@ export default function DashboardPage() {
           setTreeData(parsed.fileTree);
           setArchitecture(parsed.architecture);
           setActiveFile(parsed.architecture.entryPoint || 'index.js');
+          setIsEmptyState(false);
         } else {
           // Legacy/fallback structure
           setTreeData(parsed);
+          setIsEmptyState(false);
         }
       } catch (e) {
         console.error('Error parsing cached repository tree', e);
+        setIsEmptyState(true);
       }
-    } else {
-      // Fallback if directly navigating to dashboard
+    } else if (isDemoParam) {
+      // Fallback if demo parameter is present
       const defaultMock = {
         fileTree: {
           name: "my-app",
@@ -119,13 +134,87 @@ export default function DashboardPage() {
       setTreeData(defaultMock.fileTree as FileNode);
       setArchitecture(defaultMock.architecture);
       setActiveFile(defaultMock.architecture.entryPoint);
+      setIsEmptyState(false);
+    } else {
+      // No cached data and not demo mode -> show empty state
+      setIsEmptyState(true);
     }
   }, []);
+
+  // Canvas panning handlers
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('.cursor-pointer') || target.closest('.select-none')) {
+      return;
+    }
+
+    setIsPanning(true);
+    setPanStart({
+      x: e.clientX - panPos.x,
+      y: e.clientY - panPos.y
+    });
+    e.preventDefault();
+  };
+
+  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('.cursor-pointer') || target.closest('.select-none')) {
+      return;
+    }
+    
+    const touch = e.touches[0];
+    setIsPanning(true);
+    setPanStart({
+      x: touch.clientX - panPos.x,
+      y: touch.clientY - panPos.y
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPanning) return;
+      setPanPos({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPanning) return;
+      const touch = e.touches[0];
+      setPanPos({
+        x: touch.clientX - panStart.x,
+        y: touch.clientY - panStart.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsPanning(false);
+    };
+
+    if (isPanning) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isPanning, panStart]);
 
   // Zoom handlers
   const handleZoomIn = () => setZoomScale(prev => Math.min(prev + 0.1, 1.8));
   const handleZoomOut = () => setZoomScale(prev => Math.max(prev - 0.1, 0.5));
-  const handleZoomReset = () => setZoomScale(1);
+  const handleZoomReset = () => {
+    setZoomScale(1);
+    setPanPos({ x: 0, y: 0 });
+  };
 
   // Export handler
   const handleExport = () => {
@@ -649,6 +738,90 @@ export default function DashboardPage() {
     );
   };
 
+  if (isEmptyState) {
+    return (
+      <div className="h-[calc(100vh-4rem)] w-full bg-[#F0EDE4] text-[#1E1F22] flex items-center justify-center p-6 select-none font-sans">
+        <div className="w-full max-w-md bg-white rounded-[32px] border border-[#E5E0D5] p-8 shadow-sm text-center flex flex-col items-center gap-6 animate-fade-in">
+          <div className="w-16 h-16 rounded-3xl bg-[#F0EDE4] border border-[#E5E0D5] flex items-center justify-center text-[#1E1F22] shadow-inner mb-2">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z" />
+              <line x1="12" y1="10" x2="12" y2="16" />
+              <line x1="9" y1="13" x2="15" y2="13" />
+            </svg>
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-[#1E1F22] tracking-tight">No Repository Selected</h2>
+            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Workspace empty</p>
+            <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed pt-2">
+              Upload a ZIP compressed project folder or enter a git repository URL to generate a dynamic code dependency map.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full pt-4 border-t border-[#F0EDE4]">
+            <Link 
+              href="/upload" 
+              className="flex-1 py-3 bg-[#1E1F22] text-white hover:bg-[#2C2E33] rounded-full text-xs font-bold shadow-sm transition-all text-center cursor-pointer flex items-center justify-center"
+            >
+              Upload Project
+            </Link>
+            <button
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('demo', 'true');
+                window.history.pushState({}, '', url.toString());
+                
+                const defaultMock = {
+                  fileTree: {
+                    name: "my-app",
+                    type: "folder",
+                    children: [
+                      { name: "index.js", type: "file" },
+                      { name: "utils.js", type: "file" },
+                      {
+                        name: "components",
+                        type: "folder",
+                        children: [
+                          { name: "Dashboard.js", type: "file" },
+                          { name: "Sidebar.js", type: "file" }
+                        ]
+                      },
+                      { name: "package.json", type: "file" }
+                    ]
+                  },
+                  architecture: {
+                    entryPoint: "index.js",
+                    modules: [
+                      {
+                        name: "Components",
+                        type: "Component",
+                        description: "Core UI layout and panel display components",
+                        children: ["Dashboard.js", "Sidebar.js"]
+                      },
+                      {
+                        name: "Utils",
+                        type: "Utility",
+                        description: "Helper files and calculations",
+                        children: ["utils.js"]
+                      }
+                    ]
+                  }
+                };
+                setTreeData(defaultMock.fileTree as FileNode);
+                setArchitecture(defaultMock.architecture);
+                setActiveFile(defaultMock.architecture.entryPoint);
+                setIsEmptyState(false);
+              }}
+              className="flex-1 py-3 border border-[#E5E0D5] bg-white hover:bg-[#F0EDE4] rounded-full text-xs font-bold text-[#1E1F22] transition-all cursor-pointer"
+            >
+              Try Demo Mode
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-4rem)] w-full bg-[#F0EDE4] text-[#1E1F22] flex font-sans overflow-hidden p-4 gap-4">
       
@@ -827,13 +1000,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Canvas Body */}
-        <div className="flex-1 overflow-auto relative bg-[#FCFBF9] border border-[#E5E0D5] rounded-[24px] shadow-sm flex items-center justify-center p-4 min-h-0 custom-scrollbar">
+        <div 
+          onMouseDown={handleCanvasMouseDown}
+          onTouchStart={handleCanvasTouchStart}
+          className={`flex-1 overflow-hidden relative bg-[#FCFBF9] border border-[#E5E0D5] rounded-[24px] shadow-sm flex items-center justify-center p-4 min-h-0 select-none
+            ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}
+          `}
+        >
           
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#E5E0D5_1px,transparent_1px),linear-gradient(to_bottom,#E5E0D5_1px,transparent_1px)] bg-[size:2.5rem_2.5rem] opacity-35 pointer-events-none" />
 
           <div 
-            className="transition-transform duration-200 ease-out origin-center flex flex-col items-center justify-center min-w-[500px]"
-            style={{ transform: `scale(${zoomScale})` }}
+            className="transition-transform duration-200 ease-out origin-center flex flex-col items-center justify-center min-w-[500px] select-none"
+            style={{ transform: `translate(${panPos.x}px, ${panPos.y}px) scale(${zoomScale})` }}
           >
             {fileDiagramData ? (
               <FileDependencyVisualizer 

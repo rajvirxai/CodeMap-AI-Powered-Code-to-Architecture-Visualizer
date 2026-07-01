@@ -131,9 +131,9 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-zinc-950 text-white">
-      <div className="w-full max-w-lg p-6 sm:p-8 border border-zinc-800 bg-zinc-900/40 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md">
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-center font-sans mb-8">
+    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-[#F0EDE4] text-[#1E1F22] min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-lg p-6 sm:p-8 border border-[#E5E0D5] bg-white rounded-[24px] shadow-sm select-none">
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-center font-sans mb-8 text-[#1E1F22]">
           Connect Your Repository
         </h2>
 
@@ -147,26 +147,26 @@ export default function UploadPage() {
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all ${
               dragActive 
-                ? 'border-white bg-zinc-800/40' 
+                ? 'border-[#1E1F22] bg-[#F0EDE4]/50' 
                 : file 
-                  ? 'border-zinc-500 bg-zinc-900/60' 
-                  : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/20'
+                  ? 'border-neutral-400 bg-[#F0EDE4]/30' 
+                  : 'border-[#E5E0D5] hover:border-[#D2CBB8] bg-[#F0EDE4]/10'
             }`}
           >
-            <FolderUp className={`w-12 h-12 mb-4 transition-colors ${file ? 'text-white' : 'text-zinc-500'}`} />
+            <FolderUp className={`w-12 h-12 mb-4 transition-colors ${file ? 'text-[#1E1F22]' : 'text-neutral-400'}`} />
             
-            <p className="text-sm font-medium text-zinc-300 text-center mb-1">
+            <p className="text-sm font-medium text-neutral-600 text-center mb-1">
               {file ? file.name : "Drag & Drop your project folder here"}
             </p>
             
-            <p className="text-xs text-zinc-500 text-center mb-4">
+            <p className="text-xs text-neutral-400 text-center mb-4">
               (Must be compressed as a .zip file)
             </p>
 
             <button
               type="button"
               onClick={onBrowseClick}
-              className="px-4 py-2 border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-600 rounded text-xs font-mono font-bold tracking-wide transition-all"
+              className="px-4 py-2 border border-[#E5E0D5] bg-white hover:bg-[#F0EDE4] hover:border-neutral-400 text-[#1E1F22] rounded-xl text-xs font-mono font-bold tracking-wide transition-all shadow-sm cursor-pointer"
             >
               Browse File
             </button>
@@ -182,18 +182,18 @@ export default function UploadPage() {
 
           {/* Element B: Divider */}
           <div className="flex items-center justify-center gap-4 py-2">
-            <div className="h-px flex-1 bg-zinc-800" />
-            <span className="text-xs font-mono font-bold text-zinc-500 tracking-wider">—OR—</span>
-            <div className="h-px flex-1 bg-zinc-800" />
+            <div className="h-px flex-1 bg-[#E5E0D5]" />
+            <span className="text-xs font-mono font-bold text-neutral-400 tracking-wider">—OR—</span>
+            <div className="h-px flex-1 bg-[#E5E0D5]" />
           </div>
 
           {/* Element C: Input URL */}
           <div className="space-y-2">
-            <label className="text-xs font-mono text-zinc-500 tracking-wider block">
+            <label className="text-xs font-mono text-neutral-400 tracking-wider block">
               REPOSITORIES LINK
             </label>
-            <div className="flex items-center gap-3 px-4 py-3 border border-zinc-800 bg-zinc-950/40 rounded-lg focus-within:border-zinc-600 transition-colors">
-              <LinkIcon className="w-4 h-4 text-zinc-500" />
+            <div className="flex items-center gap-3 px-4 py-3 border border-[#E5E0D5] bg-[#F0EDE4]/10 rounded-lg focus-within:border-neutral-400 transition-colors">
+              <LinkIcon className="w-4 h-4 text-neutral-400" />
               <input
                 type="url"
                 placeholder="[https://github.com/username/repo]"
@@ -203,14 +203,14 @@ export default function UploadPage() {
                   setFile(null); // Clear file if URL is typed
                   setError(null);
                 }}
-                className="flex-1 bg-transparent text-sm font-mono text-white placeholder-zinc-700 outline-none"
+                className="flex-1 bg-transparent text-sm font-mono text-[#1E1F22] placeholder-neutral-300 outline-none"
               />
             </div>
           </div>
 
           {/* Error Alert */}
           {error && (
-            <div className="flex items-start gap-3 p-3.5 border border-red-900/40 bg-red-950/20 rounded-lg text-xs text-red-400 font-mono">
+            <div className="flex items-start gap-3 p-3.5 border border-[#FF7563]/30 bg-[#FF7563]/10 rounded-lg text-xs text-[#FF7563] font-mono">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -220,7 +220,7 @@ export default function UploadPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 border-2 border-white bg-white hover:bg-zinc-200 text-black font-bold font-mono tracking-wide rounded shadow-[4px_4px_0px_rgba(255,255,255,0.2)] hover:shadow-[2px_2px_0px_rgba(255,255,255,0.2)] hover:translate-x-0.5 hover:translate-y-0.5 disabled:opacity-50 transition-all duration-200"
+            className="w-full py-3.5 bg-[#1E1F22] hover:bg-[#2C2E33] text-white font-bold font-mono tracking-wide rounded-full shadow-sm hover:shadow hover:scale-[1.01] active:scale-95 disabled:opacity-50 transition-all duration-200 cursor-pointer"
           >
             {loading ? 'Processing...' : 'Generate CodeMap'}
           </button>
